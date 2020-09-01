@@ -16,7 +16,7 @@ import oracle.goldengate.datasource.meta.TableName;
 
 import oracle.goldengate.datasource.DsEvent;
 import oracle.goldengate.datasource.DsTransaction;
-
+import oracle.goldengate.util.DateString;
 import oracle.goldengate.util.DsMetric;
 
 import com.marklogic.client.document.DocumentManager;
@@ -164,8 +164,9 @@ public class MarkLogicHandlerTest {
     columns[4] = new DsColumnAfterValue("6");
 
     DsRecord dsRecord = new DsRecord(columns);
-
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, "2016-05-13 19:15:15.010",0l, 0l, dsRecord);
+            
+    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, 
+    		new DateString("2016-05-13 19:15:15.010"),0l, 0l, dsRecord);
     GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
     marklogicHandler.transactionCommit(e, dsTransaction);
     assertEquals(GGDataSource.Status.OK, status);
@@ -196,7 +197,7 @@ public class MarkLogicHandlerTest {
 
     DsRecord dsRecord = new DsRecord(columns);
 
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, "2016-05-13 19:15:15.010",0l, 0l, dsRecord);
+    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString("2016-05-13 19:15:15.010"),0l, 0l, dsRecord);
     GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
     marklogicHandler.transactionCommit(e, dsTransaction);
     assertEquals(GGDataSource.Status.OK, status);
@@ -231,7 +232,7 @@ public class MarkLogicHandlerTest {
 
     DsRecord dsRecord = new DsRecord(columns);
 
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, "2016-05-13 19:15:15.010",0l, 0l, dsRecord);
+    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString("2016-05-13 19:15:15.010"),0l, 0l, dsRecord);
     GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
     marklogicHandler.transactionCommit(e, dsTransaction);
     assertEquals(GGDataSource.Status.OK, status);
@@ -264,7 +265,7 @@ public class MarkLogicHandlerTest {
 
     DsRecord dsRecord = new DsRecord(columns);
 
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_UPDATE, "2016-05-13 19:15:15.010",0l, 0l, dsRecord);
+    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_UPDATE, new DateString("2016-05-13 19:15:15.010"),0l, 0l, dsRecord);
     GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
     marklogicHandler.transactionCommit(e, dsTransaction);
     assertEquals(GGDataSource.Status.OK, status);
@@ -298,7 +299,7 @@ public class MarkLogicHandlerTest {
 
     DsRecord dsRecord = new DsRecord(columns);
 
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_UPDATE, "2016-05-13 19:15:15.010",0l, 0l, dsRecord);
+    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_UPDATE, new DateString("2016-05-13 19:15:15.010"),0l, 0l, dsRecord);
     GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
     marklogicHandler.transactionCommit(e, dsTransaction);
     assertEquals(GGDataSource.Status.OK, status);
@@ -327,7 +328,7 @@ public class MarkLogicHandlerTest {
     */
 
     DsRecord dsRecord = new DsRecord(columns);
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_TRUNCATE, "2016-05-13 19:15:15.010",0l, 0l, dsRecord);
+    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_TRUNCATE, new DateString("2016-05-13 19:15:15.010"),0l, 0l, dsRecord);
     GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
     marklogicHandler.transactionCommit(e, dsTransaction);
     assertEquals(GGDataSource.Status.OK, status);
