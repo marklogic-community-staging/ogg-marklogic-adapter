@@ -11,7 +11,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <goldengate.version>12.3.1.1.1.002</goldengate.version>
+        <goldengate.version>19.1.0.0.5.007</goldengate.version>
         <jackson.version>2.9.7</jackson.version>
     </properties>
 

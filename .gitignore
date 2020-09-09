@@ -1,4 +1,8 @@
 target/
-/lib/*:w
+lib/*
 *~
 .DS_Store
+.classpath
+.project
+.settings/
+test-output/

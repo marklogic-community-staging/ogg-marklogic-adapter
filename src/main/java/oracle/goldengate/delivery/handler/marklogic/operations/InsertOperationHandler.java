@@ -1,5 +1,7 @@
 package oracle.goldengate.delivery.handler.marklogic.operations;
 
+import java.util.HashMap;
+
 import oracle.goldengate.datasource.adapt.Op;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
@@ -15,13 +17,14 @@ public class InsertOperationHandler extends OperationHandler {
 
     @Override
     public void process(TableMetaData tableMetaData, Op op) throws Exception {
+    
         WriteListItem item = new WriteListItem(
             prepareKey(tableMetaData,op, false),
             getDataMap(tableMetaData, op, false),
             WriteListItem.INSERT,
             tableMetaData.getTableName()
         );
-
+        
         processOperation(item);
         handlerProperties.totalInserts++;
     }
