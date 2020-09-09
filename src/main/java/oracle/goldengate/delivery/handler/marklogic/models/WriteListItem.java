@@ -1,6 +1,7 @@
 package oracle.goldengate.delivery.handler.marklogic.models;
 
 import oracle.goldengate.datasource.meta.TableName;
+import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 
 import java.util.*;
 
@@ -13,43 +14,49 @@ public class WriteListItem {
     private String oldUri;
     private byte[] binary;
 
-	private HashMap<String, Object> map = new HashMap<String, Object>();
+	private Map<String, Object> map = new HashMap<>();
     // allowed values UPDATE OR INSERT
     private String operation = null;
     private Collection<String> collection =  new ArrayList<String>();
     public static final String UPDATE = "update";
     public static final String INSERT = "insert";
 
-    public WriteListItem(String uri, HashMap<String, Object> map, String operation) {
+    public WriteListItem(String uri, Map<String, Object> map, String operation) {
         this.uri = uri;
         this.map = map;
         this.operation = operation;
     }
     
-    public WriteListItem(String uri, HashMap<String, Object> map, String operation, String collection) {
+    public WriteListItem(String uri, Map<String, Object> map, String operation, String collection) {
         this.uri = uri;
         this.map = map;
         this.operation = operation;
         this.collection.add(collection);
     }
 
-    public WriteListItem(String uri, HashMap<String, Object> map, String operation, TableName table) {
+    public WriteListItem(String uri, Map<String, Object> map, String operation, TableName table, HandlerProperties handlerProperties) {
         this.uri = uri;
         this.map = map;
         this.operation = operation;
 
-        this.collection.add(table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
-        this.collection.add(table.getSchemaName().toLowerCase());
+        String org = handlerProperties.getOrg();
+        String collectionPrefix = (org != null) ? "/" + org + "/" : "/";
+
+        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
+        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase());
     }
     
-    public WriteListItem(String uri, byte[] binary, String operation, TableName table, String imageCollection) {
+    public WriteListItem(String uri, byte[] binary, String operation, TableName table, HandlerProperties handlerProperties, String imageCollection) {
         this.uri = uri;
         this.map = null;
         this.binary = binary;
         this.operation = operation;
 
-        this.collection.add(table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
-        this.collection.add(table.getSchemaName().toLowerCase());
+        String org = handlerProperties.getOrg();
+        String collectionPrefix = (org != null) ? "/" + org + "/" : "/";
+
+        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
+        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase());
         this.collection.add(imageCollection);
     }
 
@@ -66,7 +73,7 @@ public class WriteListItem {
         this.oldUri = oldUri;
     }
 
-    public HashMap<String,Object> getMap() {
+    public Map<String,Object> getMap() {
         return this.map;
     }
 

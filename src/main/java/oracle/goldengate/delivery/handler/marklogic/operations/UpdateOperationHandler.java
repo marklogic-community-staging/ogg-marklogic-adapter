@@ -15,11 +15,14 @@ public class UpdateOperationHandler extends OperationHandler {
     @Override
     public void process(TableMetaData tableMetaData, Op op) throws Exception {
 
+        String baseUri = prepareKey(tableMetaData, op, false, handlerProperties);
         WriteListItem item = new WriteListItem(
-            prepareKey(tableMetaData,op, false),
-            getDataMap(tableMetaData, op, false),
-            WriteListItem.UPDATE,
-            tableMetaData.getTableName());
+                baseUri,
+                getDataMap(baseUri, tableMetaData, op, false),
+                WriteListItem.UPDATE,
+                tableMetaData.getTableName(),
+                handlerProperties
+        );
         processOperation(item);
 
         handlerProperties.totalUpdates++;

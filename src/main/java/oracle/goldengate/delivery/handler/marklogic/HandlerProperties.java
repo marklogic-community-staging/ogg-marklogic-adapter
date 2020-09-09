@@ -1,15 +1,14 @@
 package oracle.goldengate.delivery.handler.marklogic;
 
-import com.marklogic.client.io.*;
 import com.marklogic.client.DatabaseClient;
 import oracle.goldengate.delivery.handler.marklogic.models.DeleteList;
 import oracle.goldengate.delivery.handler.marklogic.models.TruncateList;
-import oracle.goldengate.delivery.handler.marklogic.models.WriteList;
-import com.marklogic.client.DatabaseClientFactory.Authentication;
+import oracle.goldengate.delivery.handler.marklogic.models.WriteListItem;
 
-import java.util.HashMap;
-import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 
 public class HandlerProperties {
 
@@ -23,6 +22,10 @@ public class HandlerProperties {
     private String auth = "digest";
     private String rootName;
     private String transformName;
+
+    private int threadCount = 4;
+    private int batchSize = 100;
+
     private HashMap<String, String> transformParams;
     private Collection<String> collections = new ArrayList<String>();
     
@@ -44,7 +47,7 @@ public class HandlerProperties {
     public Long totalTxns = 0L;
     public Long totalOperations = 0L;
 
-    public WriteList writeList = new WriteList();
+    public List<WriteListItem> writeList = new ArrayList<>();
     public DeleteList deleteList = new DeleteList();
     public TruncateList truncateList = new TruncateList();
 
@@ -84,6 +87,22 @@ public class HandlerProperties {
     }
     public void setPort(String port) {
         this.port = port;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    public void setThreadCount(int threadCount) {
+        this.threadCount = threadCount;
+    }
+
+    public int getThreadCount() {
+        return threadCount;
     }
 
     public String getFormat() {
