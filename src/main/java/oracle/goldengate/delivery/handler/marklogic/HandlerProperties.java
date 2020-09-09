@@ -25,8 +25,19 @@ public class HandlerProperties {
     private String transformName;
     private HashMap<String, String> transformParams;
     private Collection<String> collections = new ArrayList<String>();
+    
+    private String org;
+	private String schema;
+    private String application;
+    private String imageDb;
+    private String imageProperty;
+    private String imageFormat;
+    private String imageCollection;
+    private HashMap<String, String[]> imageKeyProps;
+    private final String uriDelimiter = "/";
 
-    public Long totalInserts = 0L;
+	public Long totalInserts = 0L;
+    public Long totalBinaryInserts = 0L;
     public Long totalUpdates = 0L;
     public Long totalDeletes =  0L;
     public Long totalTruncates =  0L;
@@ -43,7 +54,6 @@ public class HandlerProperties {
     public void setClient(DatabaseClient client) {
         this.client = client;
     }
-
 
     public String getDatabase() {
         return database;
@@ -145,5 +155,69 @@ public class HandlerProperties {
     public Collection<String> getCollections() {
         return this.collections;
     }
+    
+    public String getOrg() {
+		return org;
+	}
+	public void setOrg(String org) {
+		this.org = org;
+	}
+	public String getSchema() {
+		return schema;
+	}
+	public void setSchema(String schema) {
+		this.schema = schema;
+	}
+	public String getApplication() {
+		return application;
+	}
+	public void setApplication(String application) {
+		this.application = application;
+	}
+	public String getImageDb() {
+		return imageDb;
+	}
+	public void setImageDb(String imageDb) {
+		this.imageDb = imageDb;
+	}
+	public String getImageProperty() {
+		return imageProperty;
+	}
+	public void setImageProperty(String imageProperty) {
+		this.imageProperty = imageProperty;
+	}
+	public String getImageFormat() {
+		return imageFormat;
+	}
+	public void setImageFormat(String imageFormat) {
+		this.imageFormat = imageFormat;
+	}
+	public String getImageCollection() {
+		return imageCollection;
+	}
+	public void setImageCollection(String imageCollection) {
+		this.imageCollection = imageCollection;
+	}
+   
+	public HashMap<String, String[]> getImageKeyProps() {
+		return imageKeyProps;
+	}
+	
+	public void setImageKeyProps(String imageKeyProps) {
+		if (imageKeyProps == null) {
+            this.imageKeyProps = null;
+        } else {
+            // schema.table,prop1,prop2
+        	if (this.imageKeyProps == null) {
+                this.imageKeyProps = new HashMap<String, String[]>();
+        	}
+        	String[] props = imageKeyProps.split(":");
+            this.imageKeyProps.put(props[0], props[1].split(","));
+        }
+	}
+	
+	public String getUriDelimiter() {
+		return uriDelimiter;
+	}
 
 }

@@ -1,27 +1,25 @@
 package oracle.goldengate.delivery.handler.marklogic.models;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.marklogic.client.document.ServerTransform;
-
+import com.marklogic.client.document.BinaryDocumentManager;
 import com.marklogic.client.document.DocumentManager;
+import com.marklogic.client.document.ServerTransform;
+import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.DocumentMetadataHandle;
-import com.marklogic.client.io.JacksonHandle;
-import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.io.InputStreamHandle;
-import com.marklogic.client.io.marker.JSONWriteHandle;
-import com.marklogic.client.io.Format;
-
+import com.marklogic.client.io.StringHandle;
 
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
-
-import java.util.*;
-import java.util.Hashtable;
-import java.util.function.BooleanSupplier;
-import java.io.IOException;
 
 /**
  * Created by prawal on 1/23/17.
@@ -45,6 +43,12 @@ public class WriteList {
       return handlerProperties.getClient().newJSONDocumentManager();
     }
   }
+  
+  private BinaryDocumentManager getBinaryDocumentManager(HandlerProperties handlerProperties) {
+	  BinaryDocumentManager docMgr = handlerProperties.getClient().newBinaryDocumentManager();
+	  //docMgr.setMetadataExtraction(MetadataExtraction.PROPERTIES); //this may incur a performance hit
+	  return docMgr;
+  }
 
   private ObjectMapper getObjectMapper(HandlerProperties handlerProperties) {
     // defaults to json
@@ -59,6 +63,7 @@ public class WriteList {
 
     if(this.items.size() > 0) {
       DocumentManager docMgr = getDocumentManager(handlerProperties);
+      BinaryDocumentManager binaryDocMgr = getBinaryDocumentManager(handlerProperties);
       DocumentMetadataHandle metadataHandle = new DocumentMetadataHandle();
       DocumentMetadataHandle.DocumentCollections coll = metadataHandle.getCollections();
 
@@ -91,6 +96,14 @@ public class WriteList {
             coll.addAll(handlerProperties.getCollections());
             docMgr.write(item.getUri(), metadataHandle, handle);
             coll.clear();
+          } else if (item.isBinary()) {
+        	  //TODO insert images into a different database
+        	  BytesHandle handle = new BytesHandle().with(item.getBinary());
+
+              coll.addAll(item.getCollection());
+              coll.addAll(handlerProperties.getCollections());
+              binaryDocMgr.write(item.getUri(), metadataHandle, handle);
+              coll.clear();
           } else {
             boolean docExists = false;
 
@@ -98,7 +111,7 @@ public class WriteList {
               docExists = true;
             }
 
-            HashMap<String, Object> node = new HashMap<String,Object>();
+            HashMap<String, Object> node = new HashMap<String,Object>(); 
 
             if(docExists == true) {
                 node = updateNode(item, docMgr, handlerProperties);

@@ -5,3 +5,5 @@ gg.handler.marklogic.database=Documents
 gg.handler.marklogic.user=admin
 gg.handler.marklogic.password=admin
 gg.handler.marklogic.auth=digest
+gg.handler.marklogic.imageDb=data-hub-FINAL
+gg.handler.marklogic.imageKeyProps=hppq.sbjt_photo:prsnSbjtId,seqNbr

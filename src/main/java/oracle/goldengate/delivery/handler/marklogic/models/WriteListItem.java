@@ -11,8 +11,9 @@ public class WriteListItem {
 
     private String uri;
     private String oldUri;
+    private byte[] binary;
 
-    private HashMap<String, Object> map = new HashMap<String, Object>();
+	private HashMap<String, Object> map = new HashMap<String, Object>();
     // allowed values UPDATE OR INSERT
     private String operation = null;
     private Collection<String> collection =  new ArrayList<String>();
@@ -24,7 +25,7 @@ public class WriteListItem {
         this.map = map;
         this.operation = operation;
     }
-
+    
     public WriteListItem(String uri, HashMap<String, Object> map, String operation, String collection) {
         this.uri = uri;
         this.map = map;
@@ -40,6 +41,18 @@ public class WriteListItem {
         this.collection.add(table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
         this.collection.add(table.getSchemaName().toLowerCase());
     }
+    
+    public WriteListItem(String uri, byte[] binary, String operation, TableName table, String imageCollection) {
+        this.uri = uri;
+        this.map = null;
+        this.binary = binary;
+        this.operation = operation;
+
+        this.collection.add(table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
+        this.collection.add(table.getSchemaName().toLowerCase());
+        this.collection.add(imageCollection);
+    }
+
 
     public String getUri() {
         return this.uri;
@@ -64,4 +77,16 @@ public class WriteListItem {
     public Collection<String> getCollection() {
         return this.collection;
     }
+    
+    public byte[] getBinary() {
+		return binary;
+	}
+
+	public void setBinary(byte[] binary) {
+		this.binary = binary;
+	}
+	
+	public boolean isBinary() {
+		return (this.binary != null);
+	}
 }

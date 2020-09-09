@@ -11,6 +11,7 @@ import oracle.goldengate.datasource.*;
 
 import oracle.goldengate.datasource.meta.ColumnMetaData;
 import oracle.goldengate.datasource.meta.DsMetaData;
+import oracle.goldengate.datasource.meta.DsType;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.datasource.meta.TableName;
 
@@ -31,10 +32,14 @@ import com.marklogic.client.io.InputStreamHandle;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
+
+import javax.imageio.ImageIO;
 
 
 
