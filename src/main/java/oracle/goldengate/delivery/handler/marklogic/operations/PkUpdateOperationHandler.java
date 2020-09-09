@@ -18,7 +18,7 @@ public class PkUpdateOperationHandler extends OperationHandler {
         String olduri = prepareKey(tableMetaData,op,true);
 
         // deletes are handle after writes as it is currently implemented
-        handlerProperties.deleteList.add(olduri);
+        //handlerProperties.deleteList.add(olduri);
 
         WriteListItem item = new WriteListItem(
             prepareKey(tableMetaData,op, false),
@@ -31,7 +31,16 @@ public class PkUpdateOperationHandler extends OperationHandler {
         // document to merge with, write the document with the new URI and then the
         // delete will remove the document with the old URI
         item.setOldUri(olduri);
-
+		
+		// Code was created to make sure that an update doesn't delete the record if the 
+        // same update is written multiple times.
+    	if(item.getUri().equalsIgnoreCase(olduri) == Boolean.FALSE)
+    	{
+		    // deletes are handle after writes as it is currently implemented
+    		handlerProperties.deleteList.add(olduri);	
+    	}
+    	
+    	
         processOperation(item);
 
         handlerProperties.totalUpdates++;

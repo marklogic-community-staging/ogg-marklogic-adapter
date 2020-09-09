@@ -78,9 +78,11 @@ public class WriteList {
             ObjectMapper mapper = getObjectMapper(handlerProperties);
 
             ObjectWriter writer = mapper.writer();
-            if (handlerProperties.getRootName() != null) {
+            /* if (handlerProperties.getRootName() != null) {
               writer = writer.withRootName(handlerProperties.getRootName());
-            }
+            }*/  // Commented out the additional of the word root to the documents added to MarkLogic can't find a reason why we need it.
+                 // It causes an issue when attempting to do a compare of the key value pair in UpdateNode I didn't remove the code
+                 // Since we may find a business use for adding root to each document 
 
             HashMap<String, Object> node = item.getMap();
             StringHandle handle = new StringHandle(writer.writeValueAsString(node));
@@ -114,9 +116,12 @@ public class WriteList {
               ObjectMapper mapper = getObjectMapper(handlerProperties);
 
               ObjectWriter writer = mapper.writer();
-              if (handlerProperties.getRootName() != null) {
+              /* if (handlerProperties.getRootName() != null) {
                 writer = writer.withRootName(handlerProperties.getRootName());
-              }
+              } */
+              // Commented out the additional of the word root to the documents added to MarkLogic can't find a reason why we need it.
+              // It causes an issue when attempting to do a compare of the key value pair in UpdateNode.  I didn't remove the code
+              // Since we may find a business use for adding root to each document
 
               StringHandle handle = new StringHandle(writer.writeValueAsString(node));
 
