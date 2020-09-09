@@ -113,6 +113,7 @@ public class MarkLogicHandler extends AbstractHandler {
         sb.append(", updates=").append(handlerProperties.totalUpdates);
         sb.append(", deletes=").append(handlerProperties.totalDeletes);
         sb.append(", truncates=").append(handlerProperties.totalTruncates);
+        sb.append(", binaries=").append(handlerProperties.totalBinaryInserts);
         return sb.toString();
     }
 
