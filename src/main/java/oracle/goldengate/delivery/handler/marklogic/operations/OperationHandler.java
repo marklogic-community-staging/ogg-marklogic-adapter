@@ -4,6 +4,8 @@ import oracle.goldengate.datasource.DsColumn;
 import oracle.goldengate.datasource.adapt.Col;
 import oracle.goldengate.datasource.adapt.Op;
 import oracle.goldengate.datasource.meta.ColumnMetaData;
+import oracle.goldengate.datasource.meta.ColumnName;
+import oracle.goldengate.datasource.meta.DsType;
 import oracle.goldengate.datasource.meta.TableMetaData;
 
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
@@ -17,8 +19,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.security.*;
-import java.util.UUID;
-
 
 import static java.security.MessageDigest.*;
 
@@ -47,8 +47,21 @@ public abstract class OperationHandler {
     protected void processOperation(WriteListItem item) throws Exception {
         handlerProperties.writeList.add(item);
     }
+    
+    protected void addBinary(String imageUri, byte[] binary, TableMetaData tableMetaData, Col col) throws Exception {
+    	WriteListItem item = new WriteListItem(
+    		imageUri,
+    		col.getBinary(),
+            WriteListItem.INSERT,
+            tableMetaData.getTableName(),
+            handlerProperties.getImageCollection()
+        );
 
-    protected HashMap<String, Object> getDataMap(TableMetaData tableMetaData, Op op, boolean useBefore) {
+        processOperation(item);
+        handlerProperties.totalBinaryInserts++;
+    }
+
+    protected HashMap<String, Object> getDataMap(TableMetaData tableMetaData, Op op, boolean useBefore) throws Exception {
 
         HashMap<String, Object> dataMap = new HashMap<String, Object>();
         dataMap.put("headers", headers());
@@ -56,7 +69,7 @@ public abstract class OperationHandler {
         for (Col col : op) {
             ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(col.getIndex());
 
-           /*
+           /* This was commented out in the original source
             if (useBefore) {
                 if (col.getBefore() != null) {
                     dataMap.put(columnMetaData.getOriginalColumnName(), col.getBeforeValue());
@@ -69,13 +82,23 @@ public abstract class OperationHandler {
             */
 
             // Use after values if present
-            if (col.getAfter() != null) {
-                dataMap.put(columnMetaData.getOriginalColumnName(), col.getAfterValue());
-            } else if (col.getBefore() != null) {
-                dataMap.put(columnMetaData.getOriginalColumnName(), col.getBeforeValue());
+            // TODO Create camelCase column names
+            //If column is binary, then format image URI, add URI property to dataMap,
+            //  then create new WriteListItem with binary content and add to WriteList.
+            
+            if(columnMetaData.getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY.getValue()) {
+            	String imageUri = createImageUri(tableMetaData, op);
+            	dataMap.put(handlerProperties.getImageProperty()+ "Uri", imageUri);
+            	
+            	//Insert binary document from Blob column
+            	addBinary(imageUri, col.getBinary(), tableMetaData, col);
+            } else {
+                if (col.getAfter() != null) {
+                    dataMap.put(columnMetaData.getOriginalColumnName(), col.getAfterValue());
+                } else if (col.getBefore() != null) {
+                    dataMap.put(columnMetaData.getOriginalColumnName(), col.getBeforeValue());
+                }
             }
-
-
         }
         return dataMap;
     }
@@ -124,6 +147,45 @@ public abstract class OperationHandler {
         }
 
         return index;
+    }
+    
+    /*
+     * Create the image key (filename), build from a configured list of properties of the table.
+     */
+    private void appendImageKey(TableMetaData tableMetaData, Op op, String keyProps, StringBuilder sb) {
+    	String imageHashMapKey = handlerProperties.getSchema() + "." + tableMetaData.getTableName();
+        HashMap<String, String[]> imageKeyProps = handlerProperties.getImageKeyProps();
+        String[] imageProps = imageKeyProps.get(imageHashMapKey);
+        
+        if(imageProps == null || imageProps.length <=0) {
+        	logger.warn("Image Key Properties missing for " + imageHashMapKey);
+        }
+        
+        for (String imageProp : imageProps  ) {
+        	ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(new ColumnName(imageProp));
+            DsColumn col = op.getColumn(columnMetaData.getIndex());
+            sb.append(handlerProperties.getUriDelimiter());
+            sb.append(col.getAfterValue());
+        }
+    }
+    
+    /*
+     * Create a URI to reference the image object that will be saved in another document
+     *   and possibly in a different location, i.e. S3.
+     */
+    private String createImageUri(TableMetaData tableMetaData, Op op) {
+    	StringBuilder stringBuilder = new StringBuilder();
+    	stringBuilder.append(handlerProperties.getUriDelimiter());
+    	stringBuilder.append(handlerProperties.getOrg());
+    	stringBuilder.append(handlerProperties.getUriDelimiter());
+    	stringBuilder.append(handlerProperties.getSchema());
+    	stringBuilder.append(handlerProperties.getUriDelimiter());
+    	stringBuilder.append(tableMetaData.getTableName());
+    	appendImageKey(tableMetaData, op, handlerProperties.getImageProperty(), stringBuilder);
+    	stringBuilder.append(".");
+    	stringBuilder.append(handlerProperties.getImageFormat());
+    	
+    	return stringBuilder.toString();
     }
 
     private HashMap headers() {

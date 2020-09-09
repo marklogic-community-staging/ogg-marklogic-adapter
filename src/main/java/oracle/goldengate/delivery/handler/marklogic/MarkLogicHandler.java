@@ -171,7 +171,32 @@ public class MarkLogicHandler extends AbstractHandler {
 
     public void setCollections(String collections) {
         handlerProperties.setCollections(collections);
-    }
+    }    
+    
+	public void setOrg(String org) {
+		handlerProperties.setOrg(org);
+	}
+	public void setSchema(String schema) {
+		handlerProperties.setSchema(schema);
+	}
+	public void setApplication(String application) {
+		handlerProperties.setApplication(application);
+	}
+	public void setImageDb(String imageDb) {
+		handlerProperties.setImageDb(imageDb);
+	}
+	public void setImageProperty(String imageProperty) {
+		handlerProperties.setImageProperty(imageProperty);
+	}
+	public void setImageFormat(String imageFormat) {
+		handlerProperties.setImageFormat(imageFormat);
+	}
+	public void setImageCollection(String imageCollection) {
+		handlerProperties.setImageCollection(imageCollection);
+	}
+	public void setImageKeyProps(String imageKeyProps) {
+		handlerProperties.setImageKeyProps(imageKeyProps);
+	}
 
     public HandlerProperties getProperties() {
       return this.handlerProperties;
