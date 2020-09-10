@@ -7,6 +7,7 @@ import oracle.goldengate.datasource.GGDataSource.Status;
 import oracle.goldengate.datasource.adapt.Op;
 import oracle.goldengate.datasource.meta.DsMetaData;
 import oracle.goldengate.datasource.meta.TableMetaData;
+import oracle.goldengate.delivery.handler.marklogic.models.WriteListProcessor;
 import oracle.goldengate.delivery.handler.marklogic.operations.OperationHandler;
 import oracle.goldengate.delivery.handler.marklogic.util.DBOperationFactory;
 import oracle.goldengate.util.ConfigException;
@@ -81,20 +82,17 @@ public class MarkLogicHandler extends AbstractHandler {
         Status status = super.transactionCommit(e, tx);
 
         try{
-            handlerProperties.writeList.commit(handlerProperties);
+            new WriteListProcessor(handlerProperties).process(handlerProperties.writeList);
             handlerProperties.deleteList.commit(handlerProperties);
             handlerProperties.truncateList.commit(handlerProperties);
 
             handlerProperties.writeList.clear();
             handlerProperties.deleteList.clear();
             handlerProperties.truncateList.clear();
-
-
-        }catch(Exception ex){
+        } catch(Exception ex) {
             logger.error("Error flushing records ", ex);
             status = Status.ABEND;
         }
-
 
         /**TODO: Add steps for rollback */
 
@@ -198,6 +196,14 @@ public class MarkLogicHandler extends AbstractHandler {
 	public void setImageKeyProps(String imageKeyProps) {
 		handlerProperties.setImageKeyProps(imageKeyProps);
 	}
+
+    public void setBatchSize(String batchSize) {
+        handlerProperties.setBatchSize(Integer.parseInt(batchSize));
+    }
+
+    public void setThreadCount(String threadCount) {
+        handlerProperties.setThreadCount(Integer.parseInt(threadCount));
+    }
 
     public HandlerProperties getProperties() {
       return this.handlerProperties;

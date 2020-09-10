@@ -1,132 +1,35 @@
-import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.Test;
-import static org.junit.Assert.*;
-import org.junit.Ignore;
-
-import oracle.goldengate.delivery.handler.marklogic.*;
+import com.marklogic.client.document.BinaryDocumentManager;
+import com.marklogic.client.document.DocumentDescriptor;
 import oracle.goldengate.datasource.*;
-
-import oracle.goldengate.datasource.meta.ColumnMetaData;
-import oracle.goldengate.datasource.meta.ColumnName;
-import oracle.goldengate.datasource.meta.DsMetaData;
-import oracle.goldengate.datasource.meta.DsType;
-import oracle.goldengate.datasource.meta.TableMetaData;
-import oracle.goldengate.datasource.meta.TableName;
-
-import oracle.goldengate.datasource.DsEvent;
-import oracle.goldengate.datasource.DsTransaction;
-import oracle.goldengate.datasource.adapt.Op;
+import oracle.goldengate.datasource.meta.*;
+import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.util.DateString;
 import oracle.goldengate.util.DsMetric;
-
-import com.marklogic.client.document.BinaryDocumentManager;
-import com.marklogic.client.document.DocumentManager;
-import com.marklogic.client.datamovement.DataMovementManager;
-import com.marklogic.client.datamovement.QueryBatcher;
-import com.marklogic.client.datamovement.DeleteListener;
-import com.marklogic.client.query.QueryManager;
-import com.marklogic.client.query.StructuredQueryBuilder;
-import com.marklogic.client.query.StructuredQueryDefinition;
-import com.marklogic.client.io.InputStreamHandle;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Properties;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
 import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-
-/**
- * Created by prawal on 1/18/17.
- */
-public class MarkLogicBinaryHandlerTest {
-  private MarkLogicHandler marklogicHandler;
+public class MarkLogicBinaryHandlerTest extends AbstractMarkLogicTest {
   private DsEvent e;
   private DsTransaction dsTransaction;
   private TableName tableName;
   private DsMetaData dsMetaData;
   private TableMetaData tableMetaData;
 
-  private DocumentManager getDocumentManager(HandlerProperties props) {
-    // defaults to json
-    if ("xml".equals(props.getFormat())) {
-      return props.getClient().newXMLDocumentManager();
-    } else {
-      return props.getClient().newJSONDocumentManager();
-    }
-  }
-
-  private ObjectMapper getObjectMapper(String format) {
-    // defaults to json
-    if ("xml".equals(format)) {
-      return new XmlMapper();
-    } else {
-      return new ObjectMapper();
-    }
-  }
-
-  private HashMap<String, Object> readDocument(String uri, HandlerProperties props)
-    throws IOException {
-    // need an assert that checks the document in the DB
-    DocumentManager mgr = getDocumentManager(props);
-
-    InputStreamHandle handle = new InputStreamHandle();
-    mgr.read(uri, handle);
-
-    ObjectMapper mapper = getObjectMapper(props.getFormat());
-    return mapper.readValue(handle.get(), HashMap.class);
-  }
-
-  private void deleteTestCollection(HandlerProperties props) {
-    DataMovementManager dmm = props.getClient().newDataMovementManager();
-    QueryManager qm = props.getClient().newQueryManager();
-    StructuredQueryBuilder sqb = qm.newStructuredQueryBuilder();
-    StructuredQueryDefinition query = sqb.collection("ogg_test");
-
-    QueryBatcher batcher = dmm.newQueryBatcher(query);
-    batcher.withConsistentSnapshot()
-           .onUrisReady(new DeleteListener());
-    dmm.startJob(batcher);
-
-    batcher.awaitCompletion();
-    dmm.stopJob(batcher);
-}
-
   @BeforeMethod
   public void init() throws Exception {
-    marklogicHandler = new MarkLogicHandler();
-
-    Properties props = new Properties();
-    props.load(this.getClass().getResourceAsStream("/test.props"));
-
-    marklogicHandler.setHost(props.getProperty("gg.handler.marklogic.host"));
-    marklogicHandler.setDatabase(props.getProperty("gg.handler.marklogic.database"));
-    marklogicHandler.setPort(props.getProperty("gg.handler.marklogic.port"));
-    marklogicHandler.setUser(props.getProperty("gg.handler.marklogic.user"));
-    marklogicHandler.setPassword(props.getProperty("gg.handler.marklogic.password"));
-    marklogicHandler.setCollections(props.getProperty("gg.handler.marklogic.collections"));
-    
-    marklogicHandler.setOrg(props.getProperty("gg.handler.marklogic.org"));
-    marklogicHandler.setSchema(props.getProperty("gg.handler.marklogic.schema"));
-    marklogicHandler.setApplication(props.getProperty("gg.handler.marklogic.application"));
-    marklogicHandler.setImageProperty(props.getProperty("gg.handler.marklogic.imageProperty"));
-    marklogicHandler.setImageFormat(props.getProperty("gg.handler.marklogic.imageFormat"));
-    marklogicHandler.setImageCollection(props.getProperty("gg.handler.marklogic.imageCollection"));
-    marklogicHandler.setImageDb(props.getProperty("gg.handler.marklogic.imageDb"));
-    marklogicHandler.setImageKeyProps(props.getProperty("gg.handler.marklogic.imageKeyProps"));
-
-    marklogicHandler.setState(DataSourceListener.State.READY);
-
+    this.setUp();
 
     ArrayList<ColumnMetaData> columnMetaData = new ArrayList<>();
 
@@ -134,8 +37,8 @@ public class MarkLogicBinaryHandlerTest {
     columnMetaData.add(new ColumnMetaData("c2", 1,true));
     columnMetaData.add(new ColumnMetaData("c3", 2));
     columnMetaData.add(new ColumnMetaData("c4", 3));
-    
-    ColumnMetaData binaryColMeta = new ColumnMetaData("c5",
+
+    ColumnMetaData binaryColMeta = new ColumnMetaData("BLOB_DATA",
             4,
             (long)1024,
             (short) 0,
@@ -149,7 +52,7 @@ public class MarkLogicBinaryHandlerTest {
             0l,
             (short)0,
             (short)0);
-    		
+
     columnMetaData.add(binaryColMeta);
 
     tableName = new TableName("ogg_test.new_table");
@@ -172,18 +75,13 @@ public class MarkLogicBinaryHandlerTest {
 
     marklogicHandler.setHandlerMetric(dms);
     marklogicHandler.init(ds, dsMetaData);
-
-    // clear out the ogg-test collection
-    deleteTestCollection(marklogicHandler.getProperties());
   }
 
   @AfterMethod
   public void clear() throws Exception {
-    deleteTestCollection(marklogicHandler.getProperties());
-    marklogicHandler.destroy();
+    this.tearDown();
   }
 
-  
   @Test
   public void testInsertBinary() throws Exception {
     HandlerProperties props = marklogicHandler.getProperties();
@@ -208,26 +106,24 @@ public class MarkLogicBinaryHandlerTest {
 
     DsRecord dsRecord = new DsRecord(columns);
             
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, 
-    		new DateString("2016-05-13 19:15:15.010"),0l, 0l, dsRecord);
+    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")),0l, 0l, dsRecord);
     GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
     marklogicHandler.transactionCommit(e, dsTransaction);
     assertEquals(GGDataSource.Status.OK, status);    
     
-    String uri = "/new_table/c81e728d9d4c2f636f067f89cc14862c.json";
-    
-    String imageUri = "/pspd/ogg_test/ogg_test.new_table/testing/2.jpg";
+    String expectedUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c.json";
+    String expectedImageUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c/BLOB_DATA.jpg";
+
     BinaryDocumentManager binaryDocMgr = props.getClient().newBinaryDocumentManager();
-    assertTrue(binaryDocMgr.exists(imageUri) != null);
+    DocumentDescriptor bdd = binaryDocMgr.exists(expectedImageUri);
+    assertTrue(bdd != null);
     
-    HashMap<String, Object> updated = readDocument(uri, props);
+    HashMap<String, Object> updated = readDocument(expectedUri, props);
+    Map<String, Object> envelope = (Map<String, Object>) updated.get("envelope");
+    Map<String, Object> instance = (Map<String, Object>) envelope.get("instance");
+    Map<String, Object> schema = (Map<String, Object>) instance.get("OGG_TEST");
+    Map<String, Object> table = (Map<String, Object>) schema.get("NEW_TABLE");
 
-    assertEquals("testing", updated.get("c1"));
-    assertEquals("2", updated.get("c2"));
-    assertEquals("3", updated.get("c3"));
-    assertEquals("2016-05-20 09:00:00", updated.get("c4"));
-    assertEquals("6", updated.get("c5"));
-    assertEquals("/hpp", updated.get("c5"));
+    assertEquals(expectedImageUri, table.get("BLOB_DATA_URI"));
   }
-
 }

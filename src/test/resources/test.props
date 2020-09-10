@@ -7,7 +7,7 @@ gg.handler.marklogic.auth=digest
 gg.handler.marklogic.collections=TSE
 
 #extended properties
-gg.handler.marklogic.org=pspd
+gg.handler.marklogic.org=my_org
 gg.handler.marklogic.schema=ogg_test
 gg.handler.marklogic.application=TSE
 gg.handler.marklogic.imageProperty=imgObj
@@ -15,3 +15,7 @@ gg.handler.marklogic.imageFormat=jpg
 gg.handler.marklogic.imageCollection=Image
 gg.handler.marklogic.imageDb=data-hub-FINAL
 gg.handler.marklogic.imageKeyProps=ogg_test.ogg_test.new_table:c1,c2
+
+#batch properties
+gg.handler.marklogic.batchSize=200
+gg.handler.marklogic.threadCount=8

@@ -14,7 +14,7 @@ public class DeleteOperationHandler extends OperationHandler {
     @Override
     public void process(TableMetaData tableMetaData, Op op) throws Exception {
 
-        handlerProperties.deleteList.add(prepareKey(tableMetaData,op, true));
+        handlerProperties.deleteList.add(prepareKey(tableMetaData,op, true, handlerProperties));
         handlerProperties.totalDeletes++;
     }
 

@@ -1,11 +1,7 @@
 package oracle.goldengate.delivery.handler.marklogic.models;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +20,7 @@ import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 /**
  * Created by prawal on 1/23/17.
  */
+@Deprecated
 public class WriteList {
 
   private static String UPDATE_OPTION = "{operation:\"update\"}";
@@ -43,11 +40,11 @@ public class WriteList {
       return handlerProperties.getClient().newJSONDocumentManager();
     }
   }
-  
+
   private BinaryDocumentManager getBinaryDocumentManager(HandlerProperties handlerProperties) {
-	  BinaryDocumentManager docMgr = handlerProperties.getClient().newBinaryDocumentManager();
-	  //docMgr.setMetadataExtraction(MetadataExtraction.PROPERTIES); //this may incur a performance hit
-	  return docMgr;
+    BinaryDocumentManager docMgr = handlerProperties.getClient().newBinaryDocumentManager();
+    //docMgr.setMetadataExtraction(MetadataExtraction.PROPERTIES); //this may incur a performance hit
+    return docMgr;
   }
 
   private ObjectMapper getObjectMapper(HandlerProperties handlerProperties) {
@@ -69,81 +66,81 @@ public class WriteList {
 
       for (WriteListItem item : items) {
 
-          // assume updates vs inserts are handled in the transform
-          if (handlerProperties.getTransformName() != null) {
-            ServerTransform transform = getTransform(handlerProperties);
-            if (item.getOperation() == WriteListItem.UPDATE) {
-              transform.addParameter("options", UPDATE_OPTION);
-            } else {
-              transform.addParameter("options", INSERT_OPTION);
-            }
+        // assume updates vs inserts are handled in the transform
+        if (handlerProperties.getTransformName() != null) {
+          ServerTransform transform = getTransform(handlerProperties);
+          if (item.getOperation() == WriteListItem.UPDATE) {
+            transform.addParameter("options", UPDATE_OPTION);
+          } else {
+            transform.addParameter("options", INSERT_OPTION);
+          }
 
-            docMgr.setWriteTransform(transform);
+          docMgr.setWriteTransform(transform);
+
+          ObjectMapper mapper = getObjectMapper(handlerProperties);
+
+          ObjectWriter writer = mapper.writer();
+            /* if (handlerProperties.getRootName() != null) {
+              writer = writer.withRootName(handlerProperties.getRootName());
+            }*/  // Commented out the additional of the word root to the documents added to MarkLogic can't find a reason why we need it.
+          // It causes an issue when attempting to do a compare of the key value pair in UpdateNode I didn't remove the code
+          // Since we may find a business use for adding root to each document
+
+          Map<String, Object> node = item.getMap();
+          StringHandle handle = new StringHandle(writer.writeValueAsString(node));
+
+          coll.addAll(item.getCollection());
+          coll.addAll(handlerProperties.getCollections());
+          docMgr.write(item.getUri(), metadataHandle, handle);
+          coll.clear();
+        } else if (item.isBinary()) {
+          //TODO insert images into a different database
+          BytesHandle handle = new BytesHandle().with(item.getBinary());
+
+          coll.addAll(item.getCollection());
+          coll.addAll(handlerProperties.getCollections());
+          binaryDocMgr.write(item.getUri(), metadataHandle, handle);
+          coll.clear();
+        } else {
+          boolean docExists = false;
+
+          if(item.getOperation() == WriteListItem.UPDATE && docMgr.exists(item.getUri()) != null) {
+            docExists = true;
+          }
+
+          Map<String, Object> node = new HashMap<>();
+
+          if(docExists == true) {
+            node = updateNode(item, docMgr, handlerProperties);
+          } else if(item.getOperation() == WriteListItem.UPDATE) {
+            // skipping if update and doc doesn't exist
+          } else {
+            node = item.getMap();
+          }
+
+          if(docExists == false && item.getOperation() == WriteListItem.UPDATE) {
+            // skipping if update and doc doesn't exist
+          } else {
+
 
             ObjectMapper mapper = getObjectMapper(handlerProperties);
 
             ObjectWriter writer = mapper.writer();
-            /* if (handlerProperties.getRootName() != null) {
-              writer = writer.withRootName(handlerProperties.getRootName());
-            }*/  // Commented out the additional of the word root to the documents added to MarkLogic can't find a reason why we need it.
-                 // It causes an issue when attempting to do a compare of the key value pair in UpdateNode I didn't remove the code
-                 // Since we may find a business use for adding root to each document 
+              /* if (handlerProperties.getRootName() != null) {
+                writer = writer.withRootName(handlerProperties.getRootName());
+              } */
+            // Commented out the additional of the word root to the documents added to MarkLogic can't find a reason why we need it.
+            // It causes an issue when attempting to do a compare of the key value pair in UpdateNode.  I didn't remove the code
+            // Since we may find a business use for adding root to each document
 
-            HashMap<String, Object> node = item.getMap();
             StringHandle handle = new StringHandle(writer.writeValueAsString(node));
 
             coll.addAll(item.getCollection());
             coll.addAll(handlerProperties.getCollections());
             docMgr.write(item.getUri(), metadataHandle, handle);
             coll.clear();
-          } else if (item.isBinary()) {
-        	  //TODO insert images into a different database
-        	  BytesHandle handle = new BytesHandle().with(item.getBinary());
-
-              coll.addAll(item.getCollection());
-              coll.addAll(handlerProperties.getCollections());
-              binaryDocMgr.write(item.getUri(), metadataHandle, handle);
-              coll.clear();
-          } else {
-            boolean docExists = false;
-
-            if(item.getOperation() == WriteListItem.UPDATE && docMgr.exists(item.getUri()) != null) {
-              docExists = true;
-            }
-
-            HashMap<String, Object> node = new HashMap<String,Object>(); 
-
-            if(docExists == true) {
-                node = updateNode(item, docMgr, handlerProperties);
-            } else if(item.getOperation() == WriteListItem.UPDATE) {
-              // skipping if update and doc doesn't exist
-            } else {
-              node = item.getMap();
-            }
-
-            if(docExists == false && item.getOperation() == WriteListItem.UPDATE) {
-              // skipping if update and doc doesn't exist
-            } else {
-
-
-              ObjectMapper mapper = getObjectMapper(handlerProperties);
-
-              ObjectWriter writer = mapper.writer();
-              /* if (handlerProperties.getRootName() != null) {
-                writer = writer.withRootName(handlerProperties.getRootName());
-              } */
-              // Commented out the additional of the word root to the documents added to MarkLogic can't find a reason why we need it.
-              // It causes an issue when attempting to do a compare of the key value pair in UpdateNode.  I didn't remove the code
-              // Since we may find a business use for adding root to each document
-
-              StringHandle handle = new StringHandle(writer.writeValueAsString(node));
-
-              coll.addAll(item.getCollection());
-              coll.addAll(handlerProperties.getCollections());
-              docMgr.write(item.getUri(), metadataHandle, handle);
-              coll.clear();
-            }
           }
+        }
       }
     }
   };
@@ -160,7 +157,7 @@ public class WriteList {
   }
 
   private HashMap<String, Object> updateNode(WriteListItem item, DocumentManager docMgr, HandlerProperties handlerProperties)
-    throws IOException {
+          throws IOException {
 
     InputStreamHandle handle = new InputStreamHandle();
 
@@ -168,7 +165,7 @@ public class WriteList {
 
     ObjectMapper mapper = getObjectMapper(handlerProperties);
     HashMap<String, Object> original = mapper.readValue(handle.get(), HashMap.class);
-    HashMap<String, Object> update = item.getMap();
+    Map<String, Object> update = item.getMap();
 
     String key = null;
     Set<String> keys = original.keySet();

@@ -6,3 +6,5 @@ lib/*
 .project
 .settings/
 test-output/
+.idea/
+*.iml
