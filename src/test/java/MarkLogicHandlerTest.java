@@ -1,51 +1,21 @@
-import oracle.goldengate.util.DateString;
-import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.Test;
-
-import static org.junit.Assert.*;
-
-import org.junit.Ignore;
-
-import oracle.goldengate.delivery.handler.marklogic.*;
 import oracle.goldengate.datasource.*;
-
 import oracle.goldengate.datasource.meta.ColumnMetaData;
 import oracle.goldengate.datasource.meta.DsMetaData;
-import oracle.goldengate.datasource.meta.DsType;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.datasource.meta.TableName;
-
-import oracle.goldengate.datasource.DsEvent;
-import oracle.goldengate.datasource.DsTransaction;
+import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.util.DateString;
 import oracle.goldengate.util.DsMetric;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
-import com.marklogic.client.document.DocumentManager;
-import com.marklogic.client.datamovement.DataMovementManager;
-import com.marklogic.client.datamovement.QueryBatcher;
-import com.marklogic.client.datamovement.DeleteListener;
-import com.marklogic.client.query.QueryManager;
-import com.marklogic.client.query.StructuredQueryBuilder;
-import com.marklogic.client.query.StructuredQueryDefinition;
-import com.marklogic.client.io.InputStreamHandle;
+import org.testng.AssertJUnit;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
-
-import javax.imageio.ImageIO;
-
 
 /**
  * Created by prawal on 1/18/17.
@@ -117,7 +87,7 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")), 0l, 0l, dsRecord);
         GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
         marklogicHandler.transactionCommit(e, dsTransaction);
-        assertEquals(GGDataSource.Status.OK, status);
+        AssertJUnit.assertEquals(GGDataSource.Status.OK, status);
 
         String expectedUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c.json";
         HashMap<String, Object> updated = readDocument(expectedUri, props);
@@ -126,11 +96,11 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         Map<String, Object> schema = (Map<String, Object>) instance.get("OGG_TEST");
         Map<String, Object> table = (Map<String, Object>) schema.get("NEW_TABLE");
 
-        assertEquals("testing", table.get("c1"));
-        assertEquals("2", table.get("c2"));
-        assertEquals("3", table.get("c3"));
-        assertEquals("2016-05-20 09:00:00", table.get("c4"));
-        assertEquals("6", table.get("c5"));
+        AssertJUnit.assertEquals("testing", table.get("c1"));
+        AssertJUnit.assertEquals("2", table.get("c2"));
+        AssertJUnit.assertEquals("3", table.get("c3"));
+        AssertJUnit.assertEquals("2016-05-20 09:00:00", table.get("c4"));
+        AssertJUnit.assertEquals("6", table.get("c5"));
     }
 
     @Test
@@ -152,7 +122,7 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")), 0l, 0l, dsRecord);
         GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
         marklogicHandler.transactionCommit(e, dsTransaction);
-        assertEquals(GGDataSource.Status.OK, status);
+        AssertJUnit.assertEquals(GGDataSource.Status.OK, status);
 
         String expectedUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c.xml";
 
@@ -162,14 +132,14 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         Map<String, Object> table = (Map<String, Object>) schema.get("NEW_TABLE");
 
 
-        assertEquals("testing", table.get("c1"));
-        assertEquals("2", table.get("c2"));
-        assertEquals("3", table.get("c3"));
-        assertEquals("2016-05-20 09:00:00", table.get("c4"));
-        assertEquals("6", table.get("c5"));
+        AssertJUnit.assertEquals("testing", table.get("c1"));
+        AssertJUnit.assertEquals("2", table.get("c2"));
+        AssertJUnit.assertEquals("3", table.get("c3"));
+        AssertJUnit.assertEquals("2016-05-20 09:00:00", table.get("c4"));
+        AssertJUnit.assertEquals("6", table.get("c5"));
     }
 
-    @Ignore
+    @Test(enabled = false)
     public void testTransform() throws Exception {
         HandlerProperties props = marklogicHandler.getProperties();
         props.setRootName("root");
@@ -192,19 +162,19 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")), 0l, 0l, dsRecord);
         GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
         marklogicHandler.transactionCommit(e, dsTransaction);
-        assertEquals(GGDataSource.Status.OK, status);
+        AssertJUnit.assertEquals(GGDataSource.Status.OK, status);
 
         String uri = "/new_table/c81e728d9d4c2f636f067f89cc14862c.xml";
         HashMap<String, Object> updated = readDocument(uri, props);
 
-        assertEquals("testing transform", updated.get("c1"));
-        assertEquals("2", updated.get("c2"));
-        assertEquals("3", updated.get("c3"));
-        assertEquals("2016-05-20 09:00:00", updated.get("c4"));
-        assertEquals("6", updated.get("c5"));
+        AssertJUnit.assertEquals("testing transform", updated.get("c1"));
+        AssertJUnit.assertEquals("2", updated.get("c2"));
+        AssertJUnit.assertEquals("3", updated.get("c3"));
+        AssertJUnit.assertEquals("2016-05-20 09:00:00", updated.get("c4"));
+        AssertJUnit.assertEquals("6", updated.get("c5"));
     }
 
-    @Ignore
+    @Test(enabled = false)
     public void testUpdateJson() throws Exception {
         testInsertJson();
 
@@ -225,19 +195,19 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_UPDATE, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")), 0l, 0l, dsRecord);
         GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
         marklogicHandler.transactionCommit(e, dsTransaction);
-        assertEquals(GGDataSource.Status.OK, status);
+        AssertJUnit.assertEquals(GGDataSource.Status.OK, status);
 
         String uri = "/new_table/c81e728d9d4c2f636f067f89cc14862c.json";
         HashMap<String, Object> updated = readDocument(uri, props);
 
-        assertEquals("puneet", updated.get("c1"));
-        assertEquals("2", updated.get("c2"));
-        assertEquals("600", updated.get("c3"));
-        assertEquals("new date", updated.get("c4"));
-        assertEquals("600", updated.get("c5"));
+        AssertJUnit.assertEquals("puneet", updated.get("c1"));
+        AssertJUnit.assertEquals("2", updated.get("c2"));
+        AssertJUnit.assertEquals("600", updated.get("c3"));
+        AssertJUnit.assertEquals("new date", updated.get("c4"));
+        AssertJUnit.assertEquals("600", updated.get("c5"));
     }
 
-    @Ignore
+    @Test(enabled = false)
     public void testUpdateXml() throws Exception {
         testInsertXml();
 
@@ -258,20 +228,20 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_UPDATE, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")), 0l, 0l, dsRecord);
         GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
         marklogicHandler.transactionCommit(e, dsTransaction);
-        assertEquals(GGDataSource.Status.OK, status);
+        AssertJUnit.assertEquals(GGDataSource.Status.OK, status);
 
         // assert that checks the document in the DB
         String uri = "/new_table/c81e728d9d4c2f636f067f89cc14862c.xml";
         HashMap<String, Object> updated = readDocument(uri, props);
 
-        assertEquals("puneet", updated.get("c1"));
-        assertEquals("2", updated.get("c2"));
-        assertEquals("600", updated.get("c3"));
-        assertEquals("new date 2", updated.get("c4"));
-        assertEquals("600", updated.get("c5"));
+        AssertJUnit.assertEquals("puneet", updated.get("c1"));
+        AssertJUnit.assertEquals("2", updated.get("c2"));
+        AssertJUnit.assertEquals("600", updated.get("c3"));
+        AssertJUnit.assertEquals("new date 2", updated.get("c4"));
+        AssertJUnit.assertEquals("600", updated.get("c5"));
     }
 
-    @Ignore
+    @Test(enabled = false)
     public void testTruncate() {
         DsColumn[] columns = new DsColumn[5];
     /*
@@ -286,11 +256,11 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
         DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_TRUNCATE, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")), 0l, 0l, dsRecord);
         GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
         marklogicHandler.transactionCommit(e, dsTransaction);
-        assertEquals(GGDataSource.Status.OK, status);
+        AssertJUnit.assertEquals(GGDataSource.Status.OK, status);
         marklogicHandler.destroy();
     }
 
-    @Ignore
+    @Test(enabled = false)
     public void testAuth() {
         String status = "digest";
         HandlerProperties handle = new HandlerProperties();
@@ -298,7 +268,6 @@ public class MarkLogicHandlerTest extends AbstractMarkLogicTest {
 
         handle.setAuth(auth);
 
-        assertEquals("digest", handle.getAuth());
+        AssertJUnit.assertEquals("digest", handle.getAuth());
     }
-
 }
