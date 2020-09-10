@@ -1,10 +1,39 @@
-target/
-lib/*
+# Ignore hidden files by default
+.*
+
+# Ignore backup files by default
 *~
-.DS_Store
-.classpath
-.project
-.settings/
+
+# Include specific hidden files
+!.*ignore
+!.*rc
+!.*rc.json
+!.editorconfig
+!.env
+!.gitattributes
+!.gitmodules
+
+# Build directories for various tools
+build/
+dist/
+dist-libs/
+target/
+coverage/
+out/
 test-output/
-.idea/
+
+# IDE artifacts
 *.iml
+*.ipr
+
+# Miscellaneous files
+**.lock
+**.log*
+
+# Local files
+gradle-local*.properties
+
+*.war
+
+# QuickStart files
+entities.layout.json

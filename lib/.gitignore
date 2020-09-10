@@ -1,0 +1,2 @@
+# don't commit licensed Oracle GoldenGate JARs
+gg*-*.jar

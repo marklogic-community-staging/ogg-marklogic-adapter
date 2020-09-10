@@ -8,6 +8,7 @@ import oracle.goldengate.util.DsMetric;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.testng.Assert;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -17,113 +18,109 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 public class MarkLogicBinaryHandlerTest extends AbstractMarkLogicTest {
-  private DsEvent e;
-  private DsTransaction dsTransaction;
-  private TableName tableName;
-  private DsMetaData dsMetaData;
-  private TableMetaData tableMetaData;
+    private DsEvent e;
+    private DsTransaction dsTransaction;
+    private TableName tableName;
+    private TableMetaData tableMetaData;
 
-  @BeforeMethod
-  public void init() throws Exception {
-    this.setUp();
+    @BeforeMethod
+    public void init() throws Exception {
+        this.setUp();
 
-    ArrayList<ColumnMetaData> columnMetaData = new ArrayList<>();
+        ArrayList<ColumnMetaData> columnMetaData = new ArrayList<>();
 
-    columnMetaData.add(new ColumnMetaData("c1", 0));
-    columnMetaData.add(new ColumnMetaData("c2", 1,true));
-    columnMetaData.add(new ColumnMetaData("c3", 2));
-    columnMetaData.add(new ColumnMetaData("c4", 3));
+        columnMetaData.add(new ColumnMetaData("c1", 0));
+        columnMetaData.add(new ColumnMetaData("c2", 1, true));
+        columnMetaData.add(new ColumnMetaData("c3", 2));
+        columnMetaData.add(new ColumnMetaData("c4", 3));
 
-    ColumnMetaData binaryColMeta = new ColumnMetaData("BLOB_DATA",
+        ColumnMetaData binaryColMeta = new ColumnMetaData("BLOB_DATA",
             4,
-            (long)1024,
+            1024,
             (short) 0,
-            (short)DsType.GGType.GGType_UNSET.getValue(), //DsType.GGType.GGType_UNSET,
-            (short)DsType.GGSubType.GG_SUBTYPE_BINARY.getValue(), // DsType.GGSubType.GG_SUBTYPE_BINARY,
-            (short)0,
-            (short)0,
-            (short)0,
-            0l,
-            0l,
-            0l,
-            (short)0,
-            (short)0);
+            (short) DsType.GGType.GGType_UNSET.getValue(), //DsType.GGType.GGType_UNSET,
+            (short) DsType.GGSubType.GG_SUBTYPE_BINARY.getValue(), // DsType.GGSubType.GG_SUBTYPE_BINARY,
+            (short) 0,
+            (short) 0,
+            (short) 0,
+            0L,
+            0L,
+            0L,
+            (short) 0,
+            (short) 0);
 
-    columnMetaData.add(binaryColMeta);
+        columnMetaData.add(binaryColMeta);
 
-    tableName = new TableName("ogg_test.new_table");
+        tableName = new TableName("ogg_test.new_table");
 
-    tableMetaData = new TableMetaData(tableName, columnMetaData);
+        tableMetaData = new TableMetaData(tableName, columnMetaData);
 
-    dsMetaData = new DsMetaData();
-    dsMetaData.setTableMetaData(tableMetaData);
+        DsMetaData dsMetaData = new DsMetaData();
+        dsMetaData.setTableMetaData(tableMetaData);
 
-    long i = 233;
-    long j = 32323;
+        long i = 233;
+        long j = 32323;
 
-    GGTranID ggTranID = GGTranID.getID(i, j);
+        GGTranID ggTranID = GGTranID.getID(i, j);
 
-    dsTransaction = new DsTransaction(ggTranID);
-    e = new DsEventManager.TxEvent(dsTransaction, ggTranID, dsMetaData, "Sample Transaction");
+        dsTransaction = new DsTransaction(ggTranID);
+        e = new DsEventManager.TxEvent(dsTransaction, ggTranID, dsMetaData, "Sample Transaction");
 
-    DataSourceConfig ds = new DataSourceConfig();
-    DsMetric dms = new DsMetric();
+        DataSourceConfig ds = new DataSourceConfig();
+        DsMetric dms = new DsMetric();
 
-    marklogicHandler.setHandlerMetric(dms);
-    marklogicHandler.init(ds, dsMetaData);
-  }
+        marklogicHandler.setHandlerMetric(dms);
+        marklogicHandler.init(ds, dsMetaData);
+    }
 
-  @AfterMethod
-  public void clear() throws Exception {
-    this.tearDown();
-  }
+    @AfterMethod
+    public void clear() {
+        this.tearDown();
+    }
 
-  @Test
-  public void testInsertBinary() throws Exception {
-    HandlerProperties props = marklogicHandler.getProperties();
-    
-    //Read image from resources
-    //TODO move to separate method
-    BufferedImage image = ImageIO.read(getClass().getResource("/30201.jpg"));
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-	ImageIO.write(image, "jpg", baos);
-	baos.flush();
-	byte[] binaryImage = baos.toByteArray();
-	baos.close();
+    @Test
+    public void testInsertBinary() throws Exception {
+        HandlerProperties props = marklogicHandler.getProperties();
 
-    marklogicHandler.setFormat("json");
+        //Read image from resources
+        //TODO move to separate method
+        BufferedImage image = ImageIO.read(getClass().getResource("/30201.jpg"));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", baos);
+        baos.flush();
+        byte[] binaryImage = baos.toByteArray();
+        baos.close();
 
-    DsColumn[] columns = new DsColumn[5];
-    columns[0] = new DsColumnAfterValue("testing");
-    columns[1] = new DsColumnAfterValue("2");
-    columns[2] = new DsColumnAfterValue("3");
-    columns[3] = new DsColumnAfterValue("2016-05-20 09:00:00");
-    columns[4] = new DsColumnAfterValue(null, binaryImage);
+        marklogicHandler.setFormat("json");
 
-    DsRecord dsRecord = new DsRecord(columns);
-            
-    DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")),0l, 0l, dsRecord);
-    GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
-    marklogicHandler.transactionCommit(e, dsTransaction);
-    assertEquals(GGDataSource.Status.OK, status);    
-    
-    String expectedUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c.json";
-    String expectedImageUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c/BLOB_DATA.jpg";
+        DsColumn[] columns = new DsColumn[5];
+        columns[0] = new DsColumnAfterValue("testing");
+        columns[1] = new DsColumnAfterValue("2");
+        columns[2] = new DsColumnAfterValue("3");
+        columns[3] = new DsColumnAfterValue("2016-05-20 09:00:00");
+        columns[4] = new DsColumnAfterValue(null, binaryImage);
 
-    BinaryDocumentManager binaryDocMgr = props.getClient().newBinaryDocumentManager();
-    DocumentDescriptor bdd = binaryDocMgr.exists(expectedImageUri);
-    assertTrue(bdd != null);
-    
-    HashMap<String, Object> updated = readDocument(expectedUri, props);
-    Map<String, Object> envelope = (Map<String, Object>) updated.get("envelope");
-    Map<String, Object> instance = (Map<String, Object>) envelope.get("instance");
-    Map<String, Object> schema = (Map<String, Object>) instance.get("OGG_TEST");
-    Map<String, Object> table = (Map<String, Object>) schema.get("NEW_TABLE");
+        DsRecord dsRecord = new DsRecord(columns);
 
-    assertEquals(expectedImageUri, table.get("BLOB_DATA_URI"));
-  }
+        DsOperation dsOperation = new DsOperation(tableName, tableMetaData, DsOperation.OpType.DO_INSERT, new DateString(ZonedDateTime.parse("2016-05-13T19:15:15.010Z")), 0L, 0L, dsRecord);
+        GGDataSource.Status status = marklogicHandler.operationAdded(e, dsTransaction, dsOperation);
+        marklogicHandler.transactionCommit(e, dsTransaction);
+        Assert.assertEquals(status, GGDataSource.Status.OK);
+
+        String expectedUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c.json";
+        String expectedImageUri = "/my_org/ogg_test/new_table/c81e728d9d4c2f636f067f89cc14862c/BLOB_DATA.jpg";
+
+        BinaryDocumentManager binaryDocMgr = props.getClient().newBinaryDocumentManager();
+        DocumentDescriptor bdd = binaryDocMgr.exists(expectedImageUri);
+        Assert.assertNotNull(bdd);
+
+        HashMap<String, Object> updated = readDocument(expectedUri, props);
+        Map<String, Object> envelope = (Map<String, Object>) updated.get("envelope");
+        Map<String, Object> instance = (Map<String, Object>) envelope.get("instance");
+        Map<String, Object> schema = (Map<String, Object>) instance.get("OGG_TEST");
+        Map<String, Object> table = (Map<String, Object>) schema.get("NEW_TABLE");
+
+        Assert.assertEquals(table.get("BLOB_DATA_URI"), expectedImageUri);
+    }
 }
