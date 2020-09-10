@@ -13,24 +13,45 @@ import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicHandler;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Properties;
 
 public abstract class AbstractMarkLogicTest {
     protected MarkLogicHandler marklogicHandler;
 
+    protected Properties loadProperties() {
+        Properties props = new Properties();
+
+        try(InputStream is = this.getClass().getResourceAsStream("/test.properties")) {
+            props.load(is);
+        } catch(IOException ex) {}
+
+        try(InputStream is = this.getClass().getResourceAsStream("/test-local.properties")) {
+            props.load(is);
+        } catch(IOException ex) {}
+
+        return props;
+    }
+
     protected void setUp() throws IOException {
         marklogicHandler = new MarkLogicHandler();
 
-        Properties props = new Properties();
-        props.load(this.getClass().getResourceAsStream("/test.props"));
+        Properties props = loadProperties();
 
         marklogicHandler.setHost(props.getProperty("gg.handler.marklogic.host"));
         marklogicHandler.setDatabase(props.getProperty("gg.handler.marklogic.database"));
         marklogicHandler.setPort(props.getProperty("gg.handler.marklogic.port"));
+        marklogicHandler.setSsl(props.getProperty("gg.handler.marklogic.ssl"));
+        marklogicHandler.setGateway(props.getProperty("gg.handler.marklogic.gateway"));
         marklogicHandler.setUser(props.getProperty("gg.handler.marklogic.user"));
         marklogicHandler.setPassword(props.getProperty("gg.handler.marklogic.password"));
+        marklogicHandler.setAuth(props.getProperty("gg.handler.marklogic.auth"));
         marklogicHandler.setCollections(props.getProperty("gg.handler.marklogic.collections"));
+
+        marklogicHandler.setTruststore(props.getProperty("gg.handler.marklogic.truststore"));
+        marklogicHandler.setTruststoreFormat(props.getProperty("gg.handler.marklogic.truststoreFormat"));
+        marklogicHandler.setTruststorePassword(props.getProperty("gg.handler.marklogic.truststorePassword"));
 
         marklogicHandler.setOrg(props.getProperty("gg.handler.marklogic.org"));
         marklogicHandler.setSchema(props.getProperty("gg.handler.marklogic.schema"));

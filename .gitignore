@@ -31,7 +31,7 @@ test-output/
 **.log*
 
 # Local files
-gradle-local*.properties
+*-local*.properties
 
 *.war
 
