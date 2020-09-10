@@ -10,9 +10,23 @@ import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.delivery.handler.marklogic.models.WriteListProcessor;
 import oracle.goldengate.delivery.handler.marklogic.operations.OperationHandler;
 import oracle.goldengate.delivery.handler.marklogic.util.DBOperationFactory;
+import oracle.goldengate.delivery.handler.marklogic.util.URLFactory;
 import oracle.goldengate.util.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 
 public class MarkLogicHandler extends AbstractHandler {
 
@@ -37,7 +51,7 @@ public class MarkLogicHandler extends AbstractHandler {
         try {
             initMarkLogicClient();
         } catch (Exception e) {
-            logger.error( "Unable to connect to marklogic instance. Configured Server address list " + handlerProperties.getHost(), e);
+            logger.error("Unable to connect to marklogic instance. Configured Server address list " + handlerProperties.getHost(), e);
             throw new ConfigException("Unable to connect to marklogic instance. Configured Server address list ", e);
         }
     }
@@ -81,7 +95,7 @@ public class MarkLogicHandler extends AbstractHandler {
     public Status transactionCommit(DsEvent e, DsTransaction tx) {
         Status status = super.transactionCommit(e, tx);
 
-        try{
+        try {
             new WriteListProcessor(handlerProperties).process(handlerProperties.writeList);
             handlerProperties.deleteList.commit(handlerProperties);
             handlerProperties.truncateList.commit(handlerProperties);
@@ -89,7 +103,7 @@ public class MarkLogicHandler extends AbstractHandler {
             handlerProperties.writeList.clear();
             handlerProperties.deleteList.clear();
             handlerProperties.truncateList.clear();
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             logger.error("Error flushing records ", ex);
             status = Status.ABEND;
         }
@@ -121,13 +135,61 @@ public class MarkLogicHandler extends AbstractHandler {
         super.destroy();
     }
 
+    public X509TrustManager getDefaultTrustManager() throws NoSuchAlgorithmException, KeyStoreException {
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init((KeyStore) null);
+        for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
+            if(trustManager instanceof X509TrustManager) {
+                return (X509TrustManager) trustManager;
+            }
+        }
+        return null;
+    }
+
+    public X509TrustManager getTrustManager(String truststoreLocation, String truststoreFormat, String truststorePassword) throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException {
+        KeyStore truststore = KeyStore.getInstance(truststoreFormat);
+
+        try(InputStream truststoreInput = URLFactory.newURL(truststoreLocation).openStream()) {
+            truststore.load(truststoreInput, truststorePassword.toCharArray());
+        }
+
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(truststore);
+
+        for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
+            if(trustManager instanceof X509TrustManager) {
+                return (X509TrustManager) trustManager;
+            }
+        }
+
+        return null;
+    }
+
     private void initMarkLogicClient() throws Exception {
+        DatabaseClientFactory.SecurityContext markLogicSecurityContext = handlerProperties.getAuth().equalsIgnoreCase("DIGEST") ?
+            new DatabaseClientFactory.DigestAuthContext(handlerProperties.getUser(), handlerProperties.getPassword()) :
+            new DatabaseClientFactory.BasicAuthContext(handlerProperties.getUser(), handlerProperties.getPassword());
+
+        if(handlerProperties.isSsl()) {
+            X509TrustManager trustManager = (handlerProperties.getTruststore() == null) ?
+                        getDefaultTrustManager() :
+                        getTrustManager(handlerProperties.getTruststore(), handlerProperties.getTruststoreFormat(), handlerProperties.getTruststorePassword());
+            TrustManager[] trustManagers = { trustManager };
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, trustManagers, new SecureRandom());
+
+            markLogicSecurityContext = markLogicSecurityContext
+                .withSSLContext(sslContext, trustManager)
+                .withSSLHostnameVerifier(DatabaseClientFactory.SSLHostnameVerifier.COMMON);
+        }
 
         DatabaseClient client = DatabaseClientFactory.newClient(
-            handlerProperties.getHost(), Integer.parseInt(handlerProperties.getPort()),
+            handlerProperties.getHost(),
+            Integer.parseInt(handlerProperties.getPort()),
             handlerProperties.getDatabase(),
-            handlerProperties.getUser(), handlerProperties.getPassword(),
-            DatabaseClientFactory.Authentication.valueOf(handlerProperties.getAuth().toUpperCase())
+            markLogicSecurityContext,
+            handlerProperties.isGateway() ? DatabaseClient.ConnectionType.GATEWAY : DatabaseClient.ConnectionType.DIRECT
         );
 
         this.handlerProperties.setClient(client);
@@ -136,18 +198,23 @@ public class MarkLogicHandler extends AbstractHandler {
     public void setUser(String user) {
         handlerProperties.setUser(user);
     }
+
     public void setPassword(String pass) {
         handlerProperties.setPassword(pass);
     }
+
     public void setPort(String port) {
         handlerProperties.setPort(port);
     }
+
     public void setDatabase(String database) {
         handlerProperties.setDatabase(database);
     }
+
     public void setFormat(String format) {
         handlerProperties.setFormat(format.toLowerCase());
     }
+
     public void setHost(String host) {
         handlerProperties.setHost(host);
     }
@@ -170,32 +237,59 @@ public class MarkLogicHandler extends AbstractHandler {
 
     public void setCollections(String collections) {
         handlerProperties.setCollections(collections);
-    }    
-    
-	public void setOrg(String org) {
-		handlerProperties.setOrg(org);
-	}
-	public void setSchema(String schema) {
-		handlerProperties.setSchema(schema);
-	}
-	public void setApplication(String application) {
-		handlerProperties.setApplication(application);
-	}
-	public void setImageDb(String imageDb) {
-		handlerProperties.setImageDb(imageDb);
-	}
-	public void setImageProperty(String imageProperty) {
-		handlerProperties.setImageProperty(imageProperty);
-	}
-	public void setImageFormat(String imageFormat) {
-		handlerProperties.setImageFormat(imageFormat);
-	}
-	public void setImageCollection(String imageCollection) {
-		handlerProperties.setImageCollection(imageCollection);
-	}
-	public void setImageKeyProps(String imageKeyProps) {
-		handlerProperties.setImageKeyProps(imageKeyProps);
-	}
+    }
+
+    public void setOrg(String org) {
+        handlerProperties.setOrg(org);
+    }
+
+    public void setSchema(String schema) {
+        handlerProperties.setSchema(schema);
+    }
+
+    public void setApplication(String application) {
+        handlerProperties.setApplication(application);
+    }
+
+    public void setImageDb(String imageDb) {
+        handlerProperties.setImageDb(imageDb);
+    }
+
+    public void setImageProperty(String imageProperty) {
+        handlerProperties.setImageProperty(imageProperty);
+    }
+
+    public void setImageFormat(String imageFormat) {
+        handlerProperties.setImageFormat(imageFormat);
+    }
+
+    public void setImageCollection(String imageCollection) {
+        handlerProperties.setImageCollection(imageCollection);
+    }
+
+    public void setImageKeyProps(String imageKeyProps) {
+        handlerProperties.setImageKeyProps(imageKeyProps);
+    }
+
+    public void setGateway(String gateway) {
+        handlerProperties.setGateway(Boolean.parseBoolean(gateway));
+    }
+
+    public void setSsl(String ssl) {
+        handlerProperties.setSsl(Boolean.parseBoolean(ssl));
+    }
+
+    public void setTruststore(String truststore) {
+        handlerProperties.setTruststore(truststore);
+    }
+
+    public void setTruststoreFormat(String truststoreFormat) {
+        handlerProperties.setTruststoreFormat(truststoreFormat);
+    }
+
+    public void setTruststorePassword(String truststorePassword) {
+        handlerProperties.setTruststorePassword(truststorePassword);
+    }
 
     public void setBatchSize(String batchSize) {
         handlerProperties.setBatchSize(Integer.parseInt(batchSize));
@@ -206,6 +300,6 @@ public class MarkLogicHandler extends AbstractHandler {
     }
 
     public HandlerProperties getProperties() {
-      return this.handlerProperties;
+        return this.handlerProperties;
     }
 }
