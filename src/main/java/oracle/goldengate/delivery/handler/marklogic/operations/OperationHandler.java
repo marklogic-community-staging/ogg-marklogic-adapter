@@ -63,7 +63,7 @@ public abstract class OperationHandler {
             // If column is binary, then format image URI, add URI property to dataMap,
             // then create new WriteListItem with binary content and add to WriteList.
 
-            if (columnMetaData.getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY.getValue()) {
+            if (columnMetaData.getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY.getValue() && col.hasBinaryValue()) {
                 String binaryUri = createImageUri(baseUri, columnMetaData, op);
                 String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName() + "_URI", false, new char[]{'_'});
                 dataMap.put(columnName, binaryUri);
@@ -153,8 +153,8 @@ public abstract class OperationHandler {
         return stringBuilder.toString();
     }
 
-    private HashMap headers(TableMetaData tableMetaData) {
-        HashMap<String, Object> headers = new HashMap<String, Object>();
+    private Map<String, Object> headers(TableMetaData tableMetaData) {
+        Map<String, Object> headers = new HashMap<>();
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
         Date date = new Date();
         String fdate = df.format(date);
