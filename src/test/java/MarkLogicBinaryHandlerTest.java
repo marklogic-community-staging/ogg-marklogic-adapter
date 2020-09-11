@@ -121,6 +121,6 @@ public class MarkLogicBinaryHandlerTest extends AbstractMarkLogicTest {
         Map<String, Object> schema = (Map<String, Object>) instance.get("OGG_TEST");
         Map<String, Object> table = (Map<String, Object>) schema.get("NEW_TABLE");
 
-        Assert.assertEquals(table.get("BLOB_DATA_URI"), expectedImageUri);
+        Assert.assertEquals(table.get("blobDataUri"), expectedImageUri);
     }
 }

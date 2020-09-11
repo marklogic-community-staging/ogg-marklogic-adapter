@@ -7,6 +7,8 @@ import oracle.goldengate.datasource.meta.*;
 
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.models.WriteListItem;
+import org.apache.commons.lang.WordUtils;
+import org.apache.commons.text.CaseUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,27 +54,28 @@ public abstract class OperationHandler {
 
     protected Map<String, Object> getDataMap(String baseUri, TableMetaData tableMetaData, Op op, boolean useBefore) throws Exception {
 
-        HashMap<String, Object> dataMap = new HashMap<String, Object>();
+        HashMap<String, Object> dataMap = new HashMap<>();
 
         for (Col col : op) {
             ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(col.getIndex());
 
             // Use after values if present
-            // TODO Create camelCase column names
-            //If column is binary, then format image URI, add URI property to dataMap,
-            //  then create new WriteListItem with binary content and add to WriteList.
+            // If column is binary, then format image URI, add URI property to dataMap,
+            // then create new WriteListItem with binary content and add to WriteList.
 
             if (columnMetaData.getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY.getValue()) {
                 String binaryUri = createImageUri(baseUri, columnMetaData, op);
-                dataMap.put(columnMetaData.getColumnName() + "_URI", binaryUri);
+                String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName() + "_URI", false, new char[]{'_'});
+                dataMap.put(columnName, binaryUri);
 
                 //Insert binary document from Blob column
                 addBinary(binaryUri, col.getBinary(), tableMetaData, col);
             } else {
+                String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName(), false, new char[]{'_'});
                 if (col.getAfter() != null) {
-                    dataMap.put(columnMetaData.getOriginalColumnName(), col.getAfterValue());
+                    dataMap.put(columnName, col.getAfterValue());
                 } else if (col.getBefore() != null) {
-                    dataMap.put(columnMetaData.getOriginalColumnName(), col.getBeforeValue());
+                    dataMap.put(columnName, col.getBeforeValue());
                 }
             }
         }
