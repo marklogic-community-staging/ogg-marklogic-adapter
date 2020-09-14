@@ -23,18 +23,20 @@ public abstract class AbstractMarkLogicTest {
     protected Properties loadProperties() {
         Properties props = new Properties();
 
-        try(InputStream is = this.getClass().getResourceAsStream("/test.properties")) {
+        try (InputStream is = this.getClass().getResourceAsStream("/test.properties")) {
             props.load(is);
-        } catch(IOException ex) {}
+        } catch (Throwable t) {
+        }
 
-        try(InputStream is = this.getClass().getResourceAsStream("/test-local.properties")) {
+        try (InputStream is = this.getClass().getResourceAsStream("/test-local.properties")) {
             props.load(is);
-        } catch(IOException ex) {}
+        } catch (Throwable t) {
+        }
 
         return props;
     }
 
-    protected void setUp() throws IOException {
+    protected void setUp() {
         marklogicHandler = new MarkLogicHandler();
 
         Properties props = loadProperties();
@@ -94,7 +96,7 @@ public abstract class AbstractMarkLogicTest {
     }
 
     protected HashMap<String, Object> readDocument(String uri, HandlerProperties props)
-            throws IOException {
+        throws IOException {
         // need an assert that checks the document in the DB
         DocumentManager mgr = getDocumentManager(props);
 
@@ -117,7 +119,7 @@ public abstract class AbstractMarkLogicTest {
 
         QueryBatcher batcher = dmm.newQueryBatcher(query);
         batcher.withConsistentSnapshot()
-                .onUrisReady(new DeleteListener());
+            .onUrisReady(new DeleteListener());
         dmm.startJob(batcher);
 
         batcher.awaitCompletion();

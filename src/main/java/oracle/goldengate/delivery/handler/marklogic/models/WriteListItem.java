@@ -1,9 +1,9 @@
 package oracle.goldengate.delivery.handler.marklogic.models;
 
-import oracle.goldengate.datasource.meta.TableName;
-import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by prawal on 1/23/17.
@@ -13,56 +13,26 @@ public class WriteListItem {
     private String uri;
     private String oldUri;
     private byte[] binary;
+    private String sourceSchema;
+    private String sourceTable;
 
-	private Map<String, Object> map = new HashMap<>();
+    private Map<String, Object> map = new HashMap<>();
     // allowed values UPDATE OR INSERT
     private String operation = null;
-    private Collection<String> collection =  new ArrayList<String>();
+    private Collection<String> collection = new ArrayList<String>();
     public static final String UPDATE = "update";
     public static final String INSERT = "insert";
 
-    public WriteListItem(String uri, Map<String, Object> map, String operation) {
-        this.uri = uri;
-        this.map = map;
-        this.operation = operation;
+    public WriteListItem() {
+
     }
-    
-    public WriteListItem(String uri, Map<String, Object> map, String operation, String collection) {
-        this.uri = uri;
-        this.map = map;
-        this.operation = operation;
-        this.collection.add(collection);
-    }
-
-    public WriteListItem(String uri, Map<String, Object> map, String operation, TableName table, HandlerProperties handlerProperties) {
-        this.uri = uri;
-        this.map = map;
-        this.operation = operation;
-
-        String org = handlerProperties.getOrg();
-        String collectionPrefix = (org != null) ? "/" + org + "/" : "/";
-
-        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
-        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase());
-    }
-    
-    public WriteListItem(String uri, byte[] binary, String operation, TableName table, HandlerProperties handlerProperties, String imageCollection) {
-        this.uri = uri;
-        this.map = null;
-        this.binary = binary;
-        this.operation = operation;
-
-        String org = handlerProperties.getOrg();
-        String collectionPrefix = (org != null) ? "/" + org + "/" : "/";
-
-        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase()  + "/" + table.getShortName().toLowerCase());
-        this.collection.add(collectionPrefix + table.getSchemaName().toLowerCase());
-        this.collection.add(imageCollection);
-    }
-
 
     public String getUri() {
         return this.uri;
+    }
+
+    public void setUri(String uri) {
+        this.uri = uri;
     }
 
     public String getOldUri() {
@@ -73,27 +43,55 @@ public class WriteListItem {
         this.oldUri = oldUri;
     }
 
-    public Map<String,Object> getMap() {
+    public Map<String, Object> getMap() {
         return this.map;
     }
 
+    public void setMap(Map<String, Object> map) {
+        this.map = map;
+    }
+
     public String getOperation() {
-       return this.operation;
+        return this.operation;
+    }
+
+    public void setOperation(String operation) {
+        this.operation = operation;
     }
 
     public Collection<String> getCollection() {
         return this.collection;
     }
-    
-    public byte[] getBinary() {
-		return binary;
-	}
 
-	public void setBinary(byte[] binary) {
-		this.binary = binary;
-	}
-	
-	public boolean isBinary() {
-		return (this.binary != null);
-	}
+    public void setCollection(Collection<String> collection) {
+        this.collection = collection;
+    }
+
+    public byte[] getBinary() {
+        return binary;
+    }
+
+    public void setBinary(byte[] binary) {
+        this.binary = binary;
+    }
+
+    public boolean isBinary() {
+        return (this.binary != null);
+    }
+
+    public String getSourceSchema() {
+        return sourceSchema;
+    }
+
+    public void setSourceSchema(String sourceSchema) {
+        this.sourceSchema = sourceSchema;
+    }
+
+    public String getSourceTable() {
+        return sourceTable;
+    }
+
+    public void setSourceTable(String sourceTable) {
+        this.sourceTable = sourceTable;
+    }
 }

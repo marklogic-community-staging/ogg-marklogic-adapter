@@ -5,10 +5,10 @@ import oracle.goldengate.datasource.meta.*;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.util.DateString;
 import oracle.goldengate.util.DsMetric;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.testng.Assert;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
