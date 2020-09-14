@@ -46,3 +46,8 @@ dependencies {
 test {
     useTestNG()
 }
+
+task copyRuntimeLibs(type: Copy) {
+    into "build/libs"
+    from configurations.default
+}
