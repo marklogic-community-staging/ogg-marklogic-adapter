@@ -103,8 +103,8 @@ public class MarkLogicHandler extends AbstractHandler {
             handlerProperties.writeList.clear();
             handlerProperties.deleteList.clear();
             handlerProperties.truncateList.clear();
-        } catch (Exception ex) {
-            logger.error("Error flushing records ", ex);
+        } catch (Throwable t) {
+            logger.error("Error flushing records ", t);
             status = Status.ABEND;
         }
 
