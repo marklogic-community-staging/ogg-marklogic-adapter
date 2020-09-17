@@ -10,6 +10,7 @@ import oracle.goldengate.datasource.meta.TableName;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import org.apache.commons.text.CaseUtils;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -63,7 +64,7 @@ public class WriteListItemFactory {
                 }
             } else {
                 String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName(), false, new char[]{'_'});
-                columnValues.put(columnName, getColumnValue(col));
+                columnValues.put(columnName, getJsonValue(col, columnMetaData));
             }
         });
 
@@ -84,11 +85,57 @@ public class WriteListItemFactory {
         return items;
     }
 
-    protected static Object getColumnValue(Col col) {
-        if (col.getAfter() != null) {
-            return col.getAfterValue();
-        } else if (col.getBefore() != null) {
-            return col.getBeforeValue();
+    protected static Object getJsonValue(Col col, ColumnMetaData columnMetaData) {
+        DsColumn column = (col.getAfter() == null) ? col.getAfter() : col.getBefore();
+        if (column != null) {
+            if (column.isValueNull()) {
+                return null;
+            }
+
+            DsType columnDataType = columnMetaData.getDataType();
+            DsType.GGType ggType = columnDataType.getGGDataType();
+            DsType.GGSubType ggSubType = columnDataType.getGGDataSubType();
+
+            switch (ggType) {
+                case GG_16BIT_S:
+                case GG_16BIT_U:
+                case GG_32BIT_S:
+                case GG_32BIT_U:
+                case GG_64BIT_S:
+                case GG_64BIT_U:
+                case GG_REAL:
+                case GG_IEEE_REAL:
+                case GG_DOUBLE:
+                case GG_IEEE_DOUBLE:
+                case GG_DOUBLE_V:
+                case GG_DOUBLE_F:
+                case GG_DEC_U:
+                case GG_DEC_LSS:
+                case GG_DEC_LSE:
+                case GG_DEC_TSS:
+                case GG_DEC_TSE:
+                case GG_DEC_PACKED:
+                    return new BigDecimal(column.getValue());
+                case GG_ASCII_V:
+                case GG_ASCII_V_UP:
+                case GG_ASCII_F:
+                case GG_ASCII_F_UP:
+                    switch (ggSubType) {
+                        case GG_SUBTYPE_FLOAT:
+                        case GG_SUBTYPE_FIXED_PREC:
+                            return new BigDecimal(column.getValue());
+                        default:
+                            return column.getValue();
+                    }
+                case GG_DATETIME:
+                case GG_DATETIME_V:
+                    if (column.hasTimestampValue()) {
+                        return column.getTimestamp().getInstant();
+                    }
+                    return column.getValue();
+                default:
+                    return column.getValue();
+            }
         } else {
             return null;
         }
