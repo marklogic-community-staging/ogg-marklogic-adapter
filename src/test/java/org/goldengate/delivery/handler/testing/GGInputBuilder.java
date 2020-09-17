@@ -61,6 +61,33 @@ public class GGInputBuilder {
         return this;
     }
 
+    public GGInputBuilder withColumn(String columnName, Integer currentValue) {
+        verifyNotCommitted();
+        String currentStringValue = currentValue == null ? null : currentValue.toString();
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentStringValue, currentValue != null ? currentStringValue.getBytes() : null)));
+        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_32BIT_S.getValue(), (short) DsType.GGSubType.GGSubType_UNSET.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
+        this.columnMetaData.add(columnMetaData);
+        return this;
+    }
+
+    public GGInputBuilder withColumn(String columnName, Long currentValue) {
+        verifyNotCommitted();
+        String currentStringValue = currentValue == null ? null : currentValue.toString();
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentStringValue, currentValue != null ? currentStringValue.getBytes() : null)));
+        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_64BIT_S.getValue(), (short) DsType.GGSubType.GGSubType_UNSET.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
+        this.columnMetaData.add(columnMetaData);
+        return this;
+    }
+
+    public GGInputBuilder withColumn(String columnName, Double currentValue) {
+        verifyNotCommitted();
+        String currentStringValue = currentValue == null ? null : currentValue.toString();
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentStringValue, currentValue != null ? currentStringValue.getBytes() : null)));
+        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_DOUBLE.getValue(), (short) DsType.GGSubType.GGSubType_UNSET.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
+        this.columnMetaData.add(columnMetaData);
+        return this;
+    }
+
     public GGInputBuilder withColumn(String columnName, String currentValue) {
         verifyNotCommitted();
         this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue, currentValue != null ? currentValue.getBytes() : null)));

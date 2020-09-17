@@ -20,6 +20,7 @@ public class JSONInsertTest extends AbstractGGTest {
             .withColumn("c3", "3")
             .withColumn("c4", "2016-05-20 09:00:00")
             .withColumn("c5", "6")
+            .withColumn("NUMBER", 49)
             .commit();
 
         String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("JSONInsertTest") + ".json";
@@ -32,5 +33,6 @@ public class JSONInsertTest extends AbstractGGTest {
         Assert.assertEquals(instance.get("c3"), "3");
         Assert.assertEquals(instance.get("c4"), "2016-05-20 09:00:00");
         Assert.assertEquals(instance.get("c5"), "6");
+        Assert.assertEquals(instance.get("number"), 49);
     }
 }
