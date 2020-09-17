@@ -1,3 +1,5 @@
+package org.goldengate.delivery.handler.marklogic;
+
 import com.marklogic.client.document.BinaryDocumentManager;
 import com.marklogic.client.document.DocumentDescriptor;
 import oracle.goldengate.datasource.*;
@@ -5,6 +7,7 @@ import oracle.goldengate.datasource.meta.*;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.util.DateString;
 import oracle.goldengate.util.DsMetric;
+import org.goldengate.delivery.handler.marklogic.AbstractMarkLogicTest;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;

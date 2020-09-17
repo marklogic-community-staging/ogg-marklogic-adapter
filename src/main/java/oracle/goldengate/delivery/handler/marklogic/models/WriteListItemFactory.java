@@ -86,7 +86,7 @@ public class WriteListItemFactory {
     }
 
     protected static Object getJsonValue(Col col, ColumnMetaData columnMetaData) {
-        DsColumn column = (col.getAfter() == null) ? col.getAfter() : col.getBefore();
+        DsColumn column = (col.getAfter() != null) ? col.getAfter() : col.getBefore();
         if (column != null) {
             if (column.isValueNull()) {
                 return null;

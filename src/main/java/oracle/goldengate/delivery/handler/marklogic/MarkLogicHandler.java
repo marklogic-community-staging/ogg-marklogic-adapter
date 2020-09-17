@@ -32,9 +32,15 @@ public class MarkLogicHandler extends AbstractHandler {
 
     final private static Logger logger = LoggerFactory.getLogger(MarkLogicHandler.class);
 
-    private HandlerProperties handlerProperties;
+    protected HandlerProperties handlerProperties;
 
-    private DBOperationFactory dbOperationFactory;
+    protected DBOperationFactory dbOperationFactory;
+
+    protected MarkLogicHandler(HandlerProperties handlerProperties) {
+        super();
+        this.handlerProperties = handlerProperties;
+        dbOperationFactory = new DBOperationFactory();
+    }
 
     public MarkLogicHandler() {
         super();
@@ -135,64 +141,8 @@ public class MarkLogicHandler extends AbstractHandler {
         super.destroy();
     }
 
-    public X509TrustManager getDefaultTrustManager() throws NoSuchAlgorithmException, KeyStoreException {
-        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustManagerFactory.init((KeyStore) null);
-        for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
-            if(trustManager instanceof X509TrustManager) {
-                return (X509TrustManager) trustManager;
-            }
-        }
-        return null;
-    }
-
-    public X509TrustManager getTrustManager(String truststoreLocation, String truststoreFormat, String truststorePassword) throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException {
-        KeyStore truststore = KeyStore.getInstance(truststoreFormat);
-
-        try(InputStream truststoreInput = URLFactory.newURL(truststoreLocation).openStream()) {
-            truststore.load(truststoreInput, truststorePassword.toCharArray());
-        }
-
-        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustManagerFactory.init(truststore);
-
-        for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
-            if(trustManager instanceof X509TrustManager) {
-                return (X509TrustManager) trustManager;
-            }
-        }
-
-        return null;
-    }
-
-    private void initMarkLogicClient() throws Exception {
-        DatabaseClientFactory.SecurityContext markLogicSecurityContext = handlerProperties.getAuth().equalsIgnoreCase("DIGEST") ?
-            new DatabaseClientFactory.DigestAuthContext(handlerProperties.getUser(), handlerProperties.getPassword()) :
-            new DatabaseClientFactory.BasicAuthContext(handlerProperties.getUser(), handlerProperties.getPassword());
-
-        if(handlerProperties.isSsl()) {
-            X509TrustManager trustManager = (handlerProperties.getTruststore() == null) ?
-                        getDefaultTrustManager() :
-                        getTrustManager(handlerProperties.getTruststore(), handlerProperties.getTruststoreFormat(), handlerProperties.getTruststorePassword());
-            TrustManager[] trustManagers = { trustManager };
-
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, trustManagers, new SecureRandom());
-
-            markLogicSecurityContext = markLogicSecurityContext
-                .withSSLContext(sslContext, trustManager)
-                .withSSLHostnameVerifier(DatabaseClientFactory.SSLHostnameVerifier.COMMON);
-        }
-
-        DatabaseClient client = DatabaseClientFactory.newClient(
-            handlerProperties.getHost(),
-            Integer.parseInt(handlerProperties.getPort()),
-            handlerProperties.getDatabase(),
-            markLogicSecurityContext,
-            handlerProperties.isGateway() ? DatabaseClient.ConnectionType.GATEWAY : DatabaseClient.ConnectionType.DIRECT
-        );
-
-        this.handlerProperties.setClient(client);
+    protected void initMarkLogicClient() throws Exception {
+        this.handlerProperties.setClient(MarkLogicClientFactory.newClient(this.handlerProperties));
     }
 
     public void setUser(String user) {

@@ -1,3 +1,5 @@
+package org.goldengate.delivery.handler.marklogic;
+
 import oracle.goldengate.datasource.*;
 import oracle.goldengate.datasource.meta.ColumnMetaData;
 import oracle.goldengate.datasource.meta.DsMetaData;
@@ -6,6 +8,7 @@ import oracle.goldengate.datasource.meta.TableName;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.util.DateString;
 import oracle.goldengate.util.DsMetric;
+import org.goldengate.delivery.handler.marklogic.AbstractMarkLogicTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;

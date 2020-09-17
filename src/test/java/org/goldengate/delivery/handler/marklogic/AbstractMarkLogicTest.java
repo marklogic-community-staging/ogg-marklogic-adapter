@@ -1,3 +1,5 @@
+package org.goldengate.delivery.handler.marklogic;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.marklogic.client.datamovement.DataMovementManager;
