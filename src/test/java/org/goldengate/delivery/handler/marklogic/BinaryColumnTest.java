@@ -35,4 +35,28 @@ public class BinaryColumnTest extends AbstractGGTest {
         DocumentDescriptor bdd = binaryDocMgr.exists(expectedImageUri);
         Assert.assertNotNull(bdd);
     }
+
+    @Test
+    public void testNullBinaryColumn() throws IOException {
+        byte[] binary = this.readBinary("/30201.jpg");
+
+        GGInputBuilder builder = GGInputBuilder.newInsert(this.markLogicHandler)
+            .withSchema("ogg_test")
+            .withTable("new_table")
+            .withPrimaryKeyColumn("PK", "NullBlobTest")
+            .withColumn("BLOB_DATA", (byte[])null)
+            .commit();
+
+        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("NullBlobTest") + ".json";
+        String expectedImageUri = "/my_org/ogg_test/new_table/" + this.md5("NullBlobTest") + "/BLOB_DATA.jpg";
+
+        Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
+        Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
+
+        Assert.assertEquals(instance.get("blobDataUri"), null);
+
+        BinaryDocumentManager binaryDocMgr = this.getDatabaseClient().newBinaryDocumentManager();
+        DocumentDescriptor bdd = binaryDocMgr.exists(expectedImageUri);
+        Assert.assertNull(bdd);
+    }
 }

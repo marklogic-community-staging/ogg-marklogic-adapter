@@ -35,15 +35,14 @@ public class WriteListItemFactory {
         op.forEach(col -> {
             ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(col.getIndex());
             if (columnMetaData.getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY.getValue()) {
-                String binaryUri = createImageUri(baseUri, columnMetaData, handlerProperties);
                 String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName() + "_URI", false, new char[]{'_'});
-                columnValues.put(columnName, binaryUri);
 
                 DsColumn bcol = col.getAfter();
                 if (bcol == null) {
                     bcol = col.getBefore();
                 }
                 if (bcol != null && bcol.hasBinaryValue()) {
+                    String binaryUri = createImageUri(baseUri, columnMetaData, handlerProperties);
                     //Insert binary document from Blob column
                     byte[] blob = bcol.getBinary();
                     WriteListItem binary = new WriteListItem();
@@ -61,6 +60,12 @@ public class WriteListItemFactory {
                     binary.setSourceSchema(schema);
                     binary.setSourceTable(table);
                     items.add(binary);
+
+                    // add the uri to the parent document
+                    columnValues.put(columnName, binaryUri);
+                } else {
+                    // blank the uri in the parent document
+                    columnValues.put(columnName, null);
                 }
             } else {
                 String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName(), false, new char[]{'_'});

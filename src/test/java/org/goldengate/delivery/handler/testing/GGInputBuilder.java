@@ -63,7 +63,7 @@ public class GGInputBuilder {
 
     public GGInputBuilder withColumn(String columnName, String currentValue) {
         verifyNotCommitted();
-        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue)));
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue, currentValue != null ? currentValue.getBytes() : null)));
         ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_ASCII_V.getValue(), (short) DsType.GGSubType.GG_SUBTYPE_CHAR_TYPE.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
         this.columnMetaData.add(columnMetaData);
         return this;
