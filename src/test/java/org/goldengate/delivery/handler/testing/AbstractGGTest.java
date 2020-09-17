@@ -1,4 +1,4 @@
-package org.goldengate.delivery.handler.marklogic;
+package org.goldengate.delivery.handler.testing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -17,9 +17,12 @@ import com.marklogic.client.query.StructuredQueryDefinition;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicClientFactory;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicHandler;
-import org.testng.annotations.AfterMethod;
+import org.goldengate.delivery.handler.testing.TestMarkLogicHandler;
 import org.testng.annotations.BeforeMethod;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -28,6 +31,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class AbstractGGTest {
@@ -43,7 +47,7 @@ public class AbstractGGTest {
         this.markLogicHandler = new TestMarkLogicHandler(this.handlerProperties);
     }
 
-    @AfterMethod
+//    @AfterMethod
     public void clear() {
         deleteTestCollections();
     }
@@ -163,4 +167,25 @@ public class AbstractGGTest {
     public HandlerProperties getHandlerProperties() {
         return handlerProperties;
     }
+
+    protected Map<String, Object> getInstance(Map<String, Object> document, String schemaName, String tableName) {
+        Map<String, Object> envelope = (Map<String, Object>) document.get("envelope");
+        Map<String, Object> instance = (Map<String, Object>) envelope.get("instance");
+        Map<String, Object> schema = (Map<String, Object>) instance.get(schemaName.toUpperCase());
+        Map<String, Object> table = (Map<String, Object>) schema.get(tableName.toUpperCase());
+        return table;
+    }
+
+    protected byte[] readBinary(String path) throws IOException {
+        BufferedImage image = ImageIO.read(getClass().getResource(path));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", baos);
+        baos.flush();
+        byte[] binaryImage = baos.toByteArray();
+        baos.close();
+
+        return binaryImage;
+    }
+
+
 }

@@ -1,6 +1,5 @@
-package org.goldengate.delivery.handler.marklogic;
+package org.goldengate.delivery.handler.testing;
 
-import com.marklogic.client.DatabaseClient;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicHandler;
 import org.slf4j.Logger;

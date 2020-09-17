@@ -1,5 +1,7 @@
 package org.goldengate.delivery.handler.marklogic;
 
+import org.goldengate.delivery.handler.testing.AbstractGGTest;
+import org.goldengate.delivery.handler.testing.GGInputBuilder;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -8,14 +10,6 @@ import java.time.ZonedDateTime;
 import java.util.Map;
 
 public class TimestampColumnTest extends AbstractGGTest {
-
-    protected Map<String, Object> getInstance(Map<String, Object> document, String schemaName, String tableName) {
-        Map<String, Object> envelope = (Map<String, Object>) document.get("envelope");
-        Map<String, Object> instance = (Map<String, Object>) envelope.get("instance");
-        Map<String, Object> schema = (Map<String, Object>) instance.get(schemaName.toUpperCase());
-        Map<String, Object> table = (Map<String, Object>) schema.get(tableName.toUpperCase());
-        return table;
-    }
 
     @Test
     public void testZonedDateTime() throws IOException {

@@ -1,4 +1,4 @@
-package org.goldengate.delivery.handler.marklogic;
+package org.goldengate.delivery.handler.testing;
 
 import oracle.goldengate.datasource.*;
 import oracle.goldengate.datasource.meta.*;
@@ -26,60 +26,7 @@ public class GGInputBuilder {
     private GGInputBuilder(boolean isUpdate, MarkLogicHandler marklogicHandler) {
         this.isUpdate = isUpdate;
         this.marklogicHandler = marklogicHandler;
-//        instantiateMarkLogicHandler();
     }
-
-//    protected Properties loadProperties() {
-//        Properties props = new Properties();
-//
-//        try (InputStream is = this.getClass().getResourceAsStream("/test.properties")) {
-//            props.load(is);
-//        } catch (Throwable t) {
-//        }
-//
-//        try (InputStream is = this.getClass().getResourceAsStream("/test-local.properties")) {
-//            props.load(is);
-//        } catch (Throwable t) {
-//        }
-//
-//        return props;
-//    }
-//
-//    private void instantiateMarkLogicHandler() {
-//        marklogicHandler = new MarkLogicHandler();
-//
-//        Properties props = loadProperties();
-//
-//        marklogicHandler.setHost(props.getProperty("gg.handler.marklogic.host"));
-//        marklogicHandler.setDatabase(props.getProperty("gg.handler.marklogic.database"));
-//        marklogicHandler.setPort(props.getProperty("gg.handler.marklogic.port"));
-//        marklogicHandler.setSsl(props.getProperty("gg.handler.marklogic.ssl"));
-//        marklogicHandler.setGateway(props.getProperty("gg.handler.marklogic.gateway"));
-//        marklogicHandler.setUser(props.getProperty("gg.handler.marklogic.user"));
-//        marklogicHandler.setPassword(props.getProperty("gg.handler.marklogic.password"));
-//        marklogicHandler.setAuth(props.getProperty("gg.handler.marklogic.auth"));
-//        marklogicHandler.setCollections(props.getProperty("gg.handler.marklogic.collections"));
-//
-//        marklogicHandler.setTruststore(props.getProperty("gg.handler.marklogic.truststore"));
-//        marklogicHandler.setTruststoreFormat(props.getProperty("gg.handler.marklogic.truststoreFormat"));
-//        marklogicHandler.setTruststorePassword(props.getProperty("gg.handler.marklogic.truststorePassword"));
-//
-//        marklogicHandler.setOrg(props.getProperty("gg.handler.marklogic.org"));
-//        marklogicHandler.setSchema(props.getProperty("gg.handler.marklogic.schema"));
-//        marklogicHandler.setApplication(props.getProperty("gg.handler.marklogic.application"));
-//        marklogicHandler.setImageProperty(props.getProperty("gg.handler.marklogic.imageProperty"));
-//        marklogicHandler.setImageFormat(props.getProperty("gg.handler.marklogic.imageFormat"));
-//        marklogicHandler.setImageCollection(props.getProperty("gg.handler.marklogic.imageCollection"));
-//        marklogicHandler.setImageDb(props.getProperty("gg.handler.marklogic.imageDb"));
-//        marklogicHandler.setImageKeyProps(props.getProperty("gg.handler.marklogic.imageKeyProps"));
-//
-//        marklogicHandler.setBatchSize(props.getProperty("gg.handler.marklogic.batchSize"));
-//        marklogicHandler.setThreadCount(props.getProperty("gg.handler.marklogic.threadCount"));
-//
-//        marklogicHandler.setOrg(props.getProperty("gg.handler.marklogic.org"));
-//
-//        marklogicHandler.setState(DataSourceListener.State.READY);
-//    }
 
     public static GGInputBuilder newUpdate(MarkLogicHandler marklogicHandler) {
         return new GGInputBuilder(true, marklogicHandler);
@@ -126,6 +73,14 @@ public class GGInputBuilder {
         verifyNotCommitted();
         this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue)));
         ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_DATETIME.getValue(), (short) DsType.GGSubType.GGSubType_UNSET.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
+        this.columnMetaData.add(columnMetaData);
+        return this;
+    }
+
+    public GGInputBuilder withColumn(String columnName, byte[] currentValue) {
+        verifyNotCommitted();
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(null, currentValue)));
+        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GGType_UNSET.getValue(), (short) DsType.GGSubType.GG_SUBTYPE_BINARY.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
         this.columnMetaData.add(columnMetaData);
         return this;
     }
