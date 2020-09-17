@@ -16,6 +16,8 @@ import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.io.marker.AbstractWriteHandle;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,10 +55,10 @@ public class WriteListProcessor {
 
     private WriteBatcher newWriteBatcher(DataMovementManager manager, HandlerProperties handlerProperties) {
         WriteBatcher writeBatcher = manager.newWriteBatcher()
-                .withBatchSize(handlerProperties.getBatchSize())
-                .withThreadCount(handlerProperties.getThreadCount());
+            .withBatchSize(handlerProperties.getBatchSize())
+            .withThreadCount(handlerProperties.getThreadCount());
 
-        if(handlerProperties.getTransformName() != null) {
+        if (handlerProperties.getTransformName() != null) {
             ServerTransform transform = newTransform(handlerProperties);
             writeBatcher = writeBatcher.withTransform(transform);
         }
@@ -65,7 +67,7 @@ public class WriteListProcessor {
     }
 
     private ObjectWriter newObjectWriter(HandlerProperties handlerProperties) {
-        ObjectMapper mapper = "xml".equals(handlerProperties.getFormat()) ?  new XmlMapper() : new ObjectMapper();
+        ObjectMapper mapper = "xml".equals(handlerProperties.getFormat()) ? new XmlMapper() : new ObjectMapper();
         ObjectWriter writer = mapper.writer();
         writer = writer.withRootName("envelope");
         return writer;
@@ -73,14 +75,13 @@ public class WriteListProcessor {
 
     public void process(Collection<WriteListItem> writeListItems) throws JsonProcessingException {
 
-        for(WriteListItem item : writeListItems) {
+        for (WriteListItem item : writeListItems) {
             AbstractWriteHandle handle;
 
             if (item.isBinary()) {
                 handle = new BytesHandle().with(item.getBinary()).withFormat(Format.BINARY);
             } else {
-                Map<String, Object> node = item.getMap();
-                String docString = this.objectWriter.writeValueAsString(node);
+                String docString = this.objectWriter.writeValueAsString(createEnvelope(item));
                 handle = new StringHandle(docString).withFormat(Format.JSON);
             }
 
@@ -92,5 +93,35 @@ public class WriteListProcessor {
         }
 
         this.writeBatcher.flushAndWait();
+    }
+
+    protected Map<String, Object> createEnvelope(WriteListItem item) {
+        Map<String, Object> envelope = new HashMap<>();
+
+        Map<String, Object> instance = new HashMap<>();
+        Map<String, Object> schemaMap = new HashMap<>();
+        instance.put(item.getSourceSchema(), schemaMap);
+        schemaMap.put(item.getSourceTable(), item.getMap());
+
+        envelope.put("instance", instance);
+        envelope.put("headers", getHeaders(item));
+
+        return envelope;
+    }
+
+    protected Map<String, Object> getHeaders(WriteListItem item) {
+        Map<String, Object> headers = new HashMap<>();
+
+        headers.put("importDate", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+        headers.put("sourceSchemaName", item.getSourceSchema());
+        headers.put("sourceTableName", item.getSourceTable());
+        headers.put("operation", item.getOperation());
+        headers.put("uri", item.getUri());
+        String previousUri = item.getOldUri();
+        if (previousUri != null) {
+            headers.put("previousUri", previousUri);
+        }
+
+        return headers;
     }
 }
