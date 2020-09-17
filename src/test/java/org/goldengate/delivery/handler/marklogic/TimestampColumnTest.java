@@ -18,11 +18,11 @@ public class TimestampColumnTest extends AbstractGGTest {
         GGInputBuilder builder = GGInputBuilder.newInsert(this.markLogicHandler)
             .withSchema("ogg_test")
             .withTable("new_table")
-            .withPrimaryKeyColumn("PK_VALUE", "12345")
+            .withPrimaryKeyColumn("PK_VALUE", "TimestampColumnTest")
             .withColumn("TS_DTTM", zonedDateTime)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("12345") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("TimestampColumnTest") + ".json";
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 

@@ -17,7 +17,7 @@ import com.marklogic.client.query.StructuredQueryDefinition;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicClientFactory;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicHandler;
-import org.goldengate.delivery.handler.testing.TestMarkLogicHandler;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 
 import javax.imageio.ImageIO;
@@ -47,7 +47,7 @@ public class AbstractGGTest {
         this.markLogicHandler = new TestMarkLogicHandler(this.handlerProperties);
     }
 
-//    @AfterMethod
+    @AfterMethod
     public void clear() {
         deleteTestCollections();
     }
@@ -170,6 +170,11 @@ public class AbstractGGTest {
 
     protected Map<String, Object> getInstance(Map<String, Object> document, String schemaName, String tableName) {
         Map<String, Object> envelope = (Map<String, Object>) document.get("envelope");
+        if(envelope == null) {
+            // this is probably an XML document
+            envelope = document;
+        }
+
         Map<String, Object> instance = (Map<String, Object>) envelope.get("instance");
         Map<String, Object> schema = (Map<String, Object>) instance.get(schemaName.toUpperCase());
         Map<String, Object> table = (Map<String, Object>) schema.get(tableName.toUpperCase());
