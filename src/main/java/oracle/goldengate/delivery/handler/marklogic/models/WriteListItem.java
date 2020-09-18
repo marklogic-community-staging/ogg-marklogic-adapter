@@ -10,6 +10,22 @@ import java.util.Map;
  */
 public class WriteListItem {
 
+    public enum OperationType {
+        INSERT("insert"),
+        PK_UPDATE("pk-update"),
+        UPDATE("update");
+
+        private final String description;
+
+        OperationType(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
     private String uri;
     private String oldUri;
     private byte[] binary;

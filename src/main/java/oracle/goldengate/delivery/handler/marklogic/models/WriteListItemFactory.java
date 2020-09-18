@@ -18,7 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 public class WriteListItemFactory {
-    public static List<WriteListItem> from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, HandlerProperties handlerProperties) {
+    public static List<WriteListItem> from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
         List<WriteListItem> items = new ArrayList<>();
         final String baseUri = prepareKey(tableMetaData, op, false, handlerProperties);
         final String previousBaseUri = checkForKeyUpdate ?
@@ -80,7 +80,7 @@ public class WriteListItemFactory {
         }
         item.setMap(columnValues);
         item.setBinary(null);
-        item.setOperation(WriteListItem.INSERT);
+        item.setOperation(operationType.getDescription());
         item.setCollection(collections);
         item.setSourceSchema(schema);
         item.setSourceTable(table);

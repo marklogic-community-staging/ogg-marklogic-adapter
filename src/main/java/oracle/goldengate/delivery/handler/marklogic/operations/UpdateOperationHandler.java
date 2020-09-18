@@ -15,7 +15,7 @@ public class UpdateOperationHandler extends OperationHandler {
 
     @Override
     public void process(TableMetaData tableMetaData, Op op) {
-        Collection<WriteListItem> items = WriteListItemFactory.from(tableMetaData, op, false, handlerProperties);
+        Collection<WriteListItem> items = WriteListItemFactory.from(tableMetaData, op, false, WriteListItem.OperationType.UPDATE, handlerProperties);
         handlerProperties.writeList.addAll(items);
         handlerProperties.totalUpdates++;
     }

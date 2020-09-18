@@ -19,6 +19,9 @@ import com.marklogic.client.io.Format;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.io.marker.AbstractWriteHandle;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
+import oracle.goldengate.delivery.handler.marklogic.util.MarkLogicBatchFailureException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,12 +29,19 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * THIS CLASS IS NOT THREAD SAFE
+ */
 public class WriteListProcessor {
+    final private static Logger logger = LoggerFactory.getLogger(WriteListProcessor.class);
+
     private final HandlerProperties handlerProperties;
     private final DataMovementManager manager;
     private final WriteBatcher writeBatcher;
     private final ObjectWriter objectWriter;
     private final JobTicket ticket;
+
+    private Throwable error = null;
 
     public WriteListProcessor(HandlerProperties handlerProperties) {
         this.handlerProperties = handlerProperties;
@@ -49,9 +59,9 @@ public class WriteListProcessor {
     private ServerTransform newTransform(HandlerProperties handlerProperties) {
         ServerTransform transform = new ServerTransform(handlerProperties.getTransformName());
 
-        HashMap<String, String> params = handlerProperties.getTransformParams();
-        for (String param : params.keySet()) {
-            transform.addParameter(param, params.get(param));
+        Map<String, String> params = handlerProperties.getTransformParams();
+        if(params != null) {
+            params.keySet().forEach(paramName -> transform.addParameter(paramName, params.get(paramName)));
         }
 
         return transform;
@@ -60,7 +70,10 @@ public class WriteListProcessor {
     private WriteBatcher newWriteBatcher(DataMovementManager manager, HandlerProperties handlerProperties) {
         WriteBatcher writeBatcher = manager.newWriteBatcher()
             .withBatchSize(handlerProperties.getBatchSize())
-            .withThreadCount(handlerProperties.getThreadCount());
+            .withThreadCount(handlerProperties.getThreadCount())
+            .onBatchFailure((batch, failure) -> {
+                this.error = failure;
+            });
 
         if (handlerProperties.getTransformName() != null) {
             ServerTransform transform = newTransform(handlerProperties);
@@ -82,7 +95,7 @@ public class WriteListProcessor {
         return writer;
     }
 
-    public void process(Collection<WriteListItem> writeListItems) throws JsonProcessingException {
+    public void process(Collection<WriteListItem> writeListItems) throws JsonProcessingException, MarkLogicBatchFailureException {
 
         for (WriteListItem item : writeListItems) {
             AbstractWriteHandle handle;
@@ -102,6 +115,10 @@ public class WriteListProcessor {
         }
 
         this.writeBatcher.flushAndWait();
+
+        if(this.error != null) {
+            throw new MarkLogicBatchFailureException("Error processing batch.", this.error);
+        }
     }
 
     protected Map<String, Object> createEnvelope(WriteListItem item) {

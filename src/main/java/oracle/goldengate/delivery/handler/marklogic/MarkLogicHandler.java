@@ -49,8 +49,8 @@ public class MarkLogicHandler extends AbstractHandler {
     }
 
     @Override
-    public void init(DsConfiguration arg0, DsMetaData arg1) {
-        super.init(arg0, arg1);
+    public void init(DsConfiguration dsConfiguration, DsMetaData dsMetaData) {
+        super.init(dsConfiguration, dsMetaData);
 
         dbOperationFactory.init(handlerProperties);
 
@@ -80,9 +80,9 @@ public class MarkLogicHandler extends AbstractHandler {
 
                 /** Increment the total number of operations */
                 handlerProperties.totalOperations++;
-            } catch (Exception e1) {
+            } catch (Throwable throwable) {
                 status = Status.ABEND;
-                logger.error("Unable to process operation.", e1);
+                logger.error("Unable to process operation.", throwable);
             }
         } else {
             status = Status.ABEND;
