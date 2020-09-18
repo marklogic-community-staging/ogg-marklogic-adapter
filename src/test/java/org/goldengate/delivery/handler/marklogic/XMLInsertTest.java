@@ -13,6 +13,7 @@ public class XMLInsertTest extends AbstractGGTest {
     @Test
     public void testXmlInsert() throws IOException {
         this.markLogicHandler.setFormat("xml");
+        this.markLogicHandler.setTransformName(null);
         GGInputBuilder builder = GGInputBuilder.newInsert(this.markLogicHandler)
             .withSchema("ogg_test")
             .withTable("new_table")

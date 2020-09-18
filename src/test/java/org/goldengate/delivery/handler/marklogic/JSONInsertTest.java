@@ -1,5 +1,6 @@
 package org.goldengate.delivery.handler.marklogic;
 
+import oracle.goldengate.datasource.GGDataSource;
 import org.goldengate.delivery.handler.testing.AbstractGGTest;
 import org.goldengate.delivery.handler.testing.GGInputBuilder;
 import org.testng.Assert;
@@ -22,6 +23,8 @@ public class JSONInsertTest extends AbstractGGTest {
             .withColumn("c5", "6")
             .withColumn("NUMBER", 49)
             .commit();
+
+        Assert.assertEquals(builder.getCommitStatus(), GGDataSource.Status.OK);
 
         String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("JSONInsertTest") + ".json";
 

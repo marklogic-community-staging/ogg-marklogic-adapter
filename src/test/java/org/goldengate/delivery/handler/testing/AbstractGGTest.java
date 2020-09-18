@@ -17,7 +17,9 @@ import com.marklogic.client.query.StructuredQueryDefinition;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicClientFactory;
 import oracle.goldengate.delivery.handler.marklogic.MarkLogicHandler;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
 import javax.imageio.ImageIO;
@@ -39,8 +41,8 @@ public class AbstractGGTest {
     protected DatabaseClient databaseClient;
     protected MarkLogicHandler markLogicHandler;
 
-    @BeforeMethod
-    public void init() throws Exception {
+    @BeforeClass
+    public void abstractGGTestBeforeClass() throws Exception {
         this.handlerProperties = newHandlerProperties();
         this.databaseClient = MarkLogicClientFactory.newClient(this.handlerProperties);
         this.handlerProperties.setClient(this.databaseClient);
@@ -48,8 +50,13 @@ public class AbstractGGTest {
     }
 
     @AfterMethod
-    public void clear() {
+    public void abstractGGTestAfterMethod() {
         deleteTestCollections();
+    }
+
+    @AfterClass
+    public void abstractGGTestAfterClass() {
+        this.markLogicHandler.destroy();
     }
 
     protected String md5(String value) {
@@ -156,6 +163,9 @@ public class AbstractGGTest {
         handlerProperties.setThreadCount(Integer.parseInt(props.getProperty("gg.handler.marklogic.threadCount")));
 
         handlerProperties.setOrg(props.getProperty("gg.handler.marklogic.org"));
+
+        handlerProperties.setTransformName(props.getProperty("gg.handler.marklogic.transformName"));
+        handlerProperties.setTransformParams(props.getProperty("gg.handler.marklogic.transformParams"));
 
         return handlerProperties;
     }
