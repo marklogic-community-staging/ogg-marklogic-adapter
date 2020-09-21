@@ -3,7 +3,7 @@
 <suite name="MarkLogic Handler Test">
     <test name="Regression">
          <classes>
-             <class name="MarkLogicHandlerTest"/>
+             <class name="org.goldengate.delivery.handler.marklogic.MarkLogicHandlerTest"/>
           </classes>
      </test> <!-- Test -->
 </suite> <!-- Suite -->

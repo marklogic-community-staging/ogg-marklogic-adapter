@@ -1,9 +1,13 @@
 package oracle.goldengate.delivery.handler.marklogic.models;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.util.StdDateFormat;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.datamovement.DataMovementManager;
 import com.marklogic.client.datamovement.JobTicket;
@@ -68,7 +72,12 @@ public class WriteListProcessor {
 
     private ObjectWriter newObjectWriter(HandlerProperties handlerProperties) {
         ObjectMapper mapper = "xml".equals(handlerProperties.getFormat()) ? new XmlMapper() : new ObjectMapper();
-        ObjectWriter writer = mapper.writer();
+        mapper = mapper
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+                .setDateFormat(new StdDateFormat().withColonInTimeZone(true))
+                .registerModule(new JavaTimeModule());
+
+        ObjectWriter writer = mapper.writer().with(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN);
         writer = writer.withRootName("envelope");
         return writer;
     }

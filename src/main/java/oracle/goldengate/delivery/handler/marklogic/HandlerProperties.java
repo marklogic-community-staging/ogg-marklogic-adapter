@@ -198,7 +198,7 @@ public class HandlerProperties {
             this.transformParams = null;
         } else {
             // entity=Article,flow=GkgCsv,flowType=input
-            this.transformParams = new HashMap<String, String>();
+            this.transformParams = new HashMap<>();
 
             String[] params = transformParams.split(",");
             for (String param : params) {
