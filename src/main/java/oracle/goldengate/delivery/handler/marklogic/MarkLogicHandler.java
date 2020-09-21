@@ -1,7 +1,9 @@
 package oracle.goldengate.delivery.handler.marklogic;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.DatabaseClientFactory;
+import com.marklogic.client.MarkLogicIOException;
 import oracle.goldengate.datasource.*;
 import oracle.goldengate.datasource.GGDataSource.Status;
 import oracle.goldengate.datasource.adapt.Op;
@@ -10,6 +12,7 @@ import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.delivery.handler.marklogic.models.WriteListProcessor;
 import oracle.goldengate.delivery.handler.marklogic.operations.OperationHandler;
 import oracle.goldengate.delivery.handler.marklogic.util.DBOperationFactory;
+import oracle.goldengate.delivery.handler.marklogic.util.MarkLogicBatchFailureException;
 import oracle.goldengate.delivery.handler.marklogic.util.URLFactory;
 import oracle.goldengate.util.ConfigException;
 import org.slf4j.Logger;
@@ -27,6 +30,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
+import java.util.concurrent.TimeUnit;
 
 public class MarkLogicHandler extends AbstractHandler {
 
@@ -101,17 +105,33 @@ public class MarkLogicHandler extends AbstractHandler {
     public Status transactionCommit(DsEvent e, DsTransaction tx) {
         Status status = super.transactionCommit(e, tx);
 
+        boolean done = false;
+        while(!done) {
+            try {
+                new WriteListProcessor(handlerProperties).process(handlerProperties.writeList);
+                done = true;
+            } catch(MarkLogicIOException ex) {
+                logger.warn("There was an error communicating with the MarkLogic server. Waiting for 45 seconds to retry...");
+                try {
+                    TimeUnit.SECONDS.sleep(45);
+                } catch (InterruptedException interruptedException) {
+                    logger.warn("Sleep interrupted waiting to reconnect to MarkLogic server.", interruptedException);
+                }
+            }
+        }
+        handlerProperties.writeList.clear();
+
         try {
-            new WriteListProcessor(handlerProperties).process(handlerProperties.writeList);
             handlerProperties.deleteList.commit(handlerProperties);
             handlerProperties.truncateList.commit(handlerProperties);
 
-            handlerProperties.writeList.clear();
             handlerProperties.deleteList.clear();
             handlerProperties.truncateList.clear();
         } catch (Throwable t) {
             logger.error("Error flushing records ", t);
-            status = Status.ABEND;
+
+            // TODO This seems bad, but we want to let the process contiunue.
+            status = Status.OK;
         }
 
         /**TODO: Add steps for rollback */
