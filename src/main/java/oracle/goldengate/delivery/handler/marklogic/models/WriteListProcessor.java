@@ -25,9 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * THIS CLASS IS NOT THREAD SAFE
@@ -97,6 +95,8 @@ public class WriteListProcessor {
 
     public void process(Collection<WriteListItem> writeListItems) throws JsonProcessingException, MarkLogicBatchFailureException {
 
+        Set<String> batchedUris = new HashSet<>();
+
         for (WriteListItem item : writeListItems) {
             AbstractWriteHandle handle;
 
@@ -111,7 +111,17 @@ public class WriteListProcessor {
             metadataHandle.getCollections().addAll(item.getCollection());
             metadataHandle.getCollections().addAll(this.handlerProperties.getCollections());
 
-            this.writeBatcher.add(item.getUri(), metadataHandle, handle);
+            String uri = item.getUri();
+            if(batchedUris.contains(uri)) {
+                // This is an exceptional case: 2 updates to the same row.
+                // We want to make sure the previous row is written and committed first.
+                logger.warn("Attempt to insert a duplicate row for table " + item.getSourceSchema() + "." + item.getSourceTable() + ": " + item.getUri());
+                this.writeBatcher.flushAndWait();
+                batchedUris.clear();
+            }
+            
+            this.writeBatcher.add(uri, metadataHandle, handle);
+            batchedUris.add(uri);
         }
 
         this.writeBatcher.flushAndWait();
