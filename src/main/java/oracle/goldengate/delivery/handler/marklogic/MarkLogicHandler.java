@@ -89,7 +89,6 @@ public class MarkLogicHandler extends AbstractHandler {
                 logger.error("Unable to process operation.", throwable);
             }
         } else {
-            status = Status.ABEND;
             logger.error("Unable to instantiate operation handler for " + dsOperation.getOperationType().toString());
         }
 
