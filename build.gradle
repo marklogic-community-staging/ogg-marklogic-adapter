@@ -4,7 +4,7 @@ plugins {
     id "com.marklogic.ml-gradle" version "4.0.4"
 }
 
-version = "2.0-rc1"
+version = "1.4-snapshot"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -17,38 +17,26 @@ repositories {
 
 dependencies {
     def ggVersion = '19.1.0.0.5.007'
-    def jacksonVersion = '2.10.2'
+    def jacksonVersion = '2.9.7'
     def marklogicClientVersion = '4.2.0'
 
     implementation "com.marklogic:marklogic-client-api:${marklogicClientVersion}"
     implementation "ch.qos.logback:logback-classic:1.0.13"
     implementation "org.apache.logging.log4j:log4j-core:2.7"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:${jacksonVersion}"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
 
-    implementation "commons-codec:commons-codec:1.12"
+    implementation "commons-codec:commons-codec:1.7"
     implementation "org.apache.velocity:velocity:1.7"
-    implementation "org.springframework:spring-context-support:4.3.20.RELEASE"
+    implementation "org.springframework:spring-context-support:4.3.5.RELEASE"
 
     // commons-lang and commons-collections are transitive dependencies from velocity
-    implementation "commons-lang:commons-lang:2.6"
-    implementation "commons-collections:commons-collections:3.2.2"
-
+//  implementation "commons-lang:commons-lang:2.6"
+//  implementation "commons-collections:commons-collections:3.2.2"
 //  implementation "joda-time:joda-time:2.9.7"
 
     testImplementation 'org.testng:testng:6.10'
 
     implementation files(
-//        "lib/ggaddons-${ggVersion}.jar",
-//        "lib/ggformatters-${ggVersion}.jar",
-//        "lib/ggjdbc-${ggVersion}.jar",
-//        "lib/ggjdbcmdp-${ggVersion}.jar",
-//        "lib/ggkafka-${ggVersion}.jar",
-//        "lib/ggkafkaconnect-${ggVersion}.jar",
-//        "lib/ggmongodb-${ggVersion}.jar",
-//        "lib/ggnosql-${ggVersion}.jar",
-
-
         "lib/ggdbutil-${ggVersion}.jar",
         "lib/gguserexitapi-${ggVersion}.jar",
         "lib/ggutil-${ggVersion}.jar"
