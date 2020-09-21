@@ -26,12 +26,14 @@ import org.slf4j.LoggerFactory;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * THIS CLASS IS NOT THREAD SAFE
  */
 public class WriteListProcessor {
     final private static Logger logger = LoggerFactory.getLogger(WriteListProcessor.class);
+    private static final int MAX_RETRY_COUNT = 50;
 
     private final HandlerProperties handlerProperties;
     private final DataMovementManager manager;
@@ -39,7 +41,10 @@ public class WriteListProcessor {
     private final ObjectWriter objectWriter;
     private final JobTicket ticket;
 
-    private Throwable error = null;
+    // We need to be able to read from this map in multiple threads, so cannot use a HashMap.
+    // ConcurrentHashMap retrieval operations do not lock in all cases.
+    private final ConcurrentHashMap<String, WriteListItemHolder> batchedItems = new ConcurrentHashMap<>();
+    private List<WriteListItemHolder> retryList = new LinkedList<>();
 
     public WriteListProcessor(HandlerProperties handlerProperties) {
         this.handlerProperties = handlerProperties;
@@ -70,7 +75,16 @@ public class WriteListProcessor {
             .withBatchSize(handlerProperties.getBatchSize())
             .withThreadCount(handlerProperties.getThreadCount())
             .onBatchFailure((batch, failure) -> {
-                this.error = failure;
+                Arrays.stream(batch.getItems()).forEach(writeEvent -> {
+                    String uri = writeEvent.getTargetUri();
+                    WriteListItemHolder holder = batchedItems.get(uri);
+                    if(holder.getRetryCount() < MAX_RETRY_COUNT) {
+                        holder.incrementRetryCount();
+                        retryList.add(holder);
+                    } else {
+                        logger.error("Maximum retries ({}) exceeded for {}, discarding.", MAX_RETRY_COUNT, holder.getUri());
+                    }
+                });
             });
 
         if (handlerProperties.getTransformName() != null) {
@@ -93,42 +107,66 @@ public class WriteListProcessor {
         return writer;
     }
 
-    public void process(Collection<WriteListItem> writeListItems) throws JsonProcessingException, MarkLogicBatchFailureException {
-
-        Set<String> batchedUris = new HashSet<>();
-
-        for (WriteListItem item : writeListItems) {
-            AbstractWriteHandle handle;
-
-            if (item.isBinary()) {
-                handle = new BytesHandle().with(item.getBinary()).withFormat(Format.BINARY);
-            } else {
-                String docString = this.objectWriter.writeValueAsString(createEnvelope(item));
-                handle = new StringHandle(docString).withFormat(Format.JSON);
+    protected List<WriteListItemHolder> toHolderList(List<WriteListItem> writeListItems) {
+        if(writeListItems == null) {
+            return Collections.emptyList();
+        } else {
+            List<WriteListItemHolder> itemsToProcess = new LinkedList<>();
+            for (WriteListItem item : writeListItems) {
+                try {
+                    WriteListItemHolder holder = new WriteListItemHolder(item);
+                    itemsToProcess.add(holder);
+                } catch(JsonProcessingException ex) {
+                    logger.error("There was an error converting " + item.getUri() + ", discarding.", ex);
+                }
             }
-
-            DocumentMetadataHandle metadataHandle = new DocumentMetadataHandle();
-            metadataHandle.getCollections().addAll(item.getCollection());
-            metadataHandle.getCollections().addAll(this.handlerProperties.getCollections());
-
-            String uri = item.getUri();
-            if(batchedUris.contains(uri)) {
-                // This is an exceptional case: 2 updates to the same row.
-                // We want to make sure the previous row is written and committed first.
-                logger.warn("Attempt to insert a duplicate row for table " + item.getSourceSchema() + "." + item.getSourceTable() + ": " + item.getUri());
-                this.writeBatcher.flushAndWait();
-                batchedUris.clear();
-            }
-            
-            this.writeBatcher.add(uri, metadataHandle, handle);
-            batchedUris.add(uri);
+            return itemsToProcess;
         }
 
-        this.writeBatcher.flushAndWait();
+    }
 
-        if(this.error != null) {
-            throw new MarkLogicBatchFailureException("Error processing batch.", this.error);
+    protected List<List<WriteListItemHolder>> toBatches(List<WriteListItemHolder> itemsToProcess) {
+        if(itemsToProcess.isEmpty() || itemsToProcess.isEmpty()) {
+            return Collections.emptyList();
+        } else {
+            List<List<WriteListItemHolder>> batches = new LinkedList<>();
+            List<WriteListItemHolder> currentBatch = new LinkedList<>();
+            batches.add(currentBatch);
+
+            final Set<String> currentBatchUris = new HashSet<>();
+            for (WriteListItemHolder holder : itemsToProcess) {
+                String uri = holder.getUri();
+                if (currentBatchUris.contains(uri)) {
+                    currentBatch = new LinkedList<>();
+                    batches.add(currentBatch);
+                    currentBatchUris.clear();
+                }
+                currentBatchUris.add(uri);
+                currentBatch.add(holder);
+            }
+
+            return batches;
         }
+    }
+
+    protected void processBatch(List<WriteListItemHolder> batch) {
+        for(WriteListItemHolder holder : batch) {
+            this.writeBatcher.add(holder.getUri(), holder.getMetadataHandle(), holder.getWriteHandle());
+        }
+        this.flushAndWait();
+
+        while(!retryList.isEmpty()) {
+            List<WriteListItemHolder> itemsToRetry = Collections.unmodifiableList(this.retryList);
+            this.retryList = new LinkedList<>();
+            for(WriteListItemHolder holder : itemsToRetry) {
+                this.writeBatcher.add(holder.getUri(), holder.getMetadataHandle(), holder.getWriteHandle());
+            }
+            this.flushAndWait();
+        }
+    }
+
+    public void process(List<WriteListItem> writeListItems) {
+        toBatches(toHolderList(writeListItems)).forEach(this::processBatch);
     }
 
     protected Map<String, Object> createEnvelope(WriteListItem item) {
@@ -159,5 +197,68 @@ public class WriteListProcessor {
         }
 
         return headers;
+    }
+
+    protected void flushAndWait() {
+        this.writeBatcher.flushAndWait();
+
+        if(!this.retryList.isEmpty()) {
+        }
+
+        this.batchedItems.clear();
+    }
+
+    class WriteListItemHolder {
+        private int retryCount;
+
+        private final String uri;
+        private final WriteListItem writeListItem;
+        private final DocumentMetadataHandle metadataHandle;
+        private final AbstractWriteHandle writeHandle;
+
+        public WriteListItemHolder(WriteListItem item) throws JsonProcessingException {
+            AbstractWriteHandle handle;
+
+            if (item.isBinary()) {
+                handle = new BytesHandle().with(item.getBinary()).withFormat(Format.BINARY);
+            } else {
+                String docString = WriteListProcessor.this.objectWriter.writeValueAsString(createEnvelope(item));
+                handle = new StringHandle(docString).withFormat(Format.JSON);
+            }
+
+            DocumentMetadataHandle metadataHandle = new DocumentMetadataHandle();
+            metadataHandle.getCollections().addAll(item.getCollection());
+            metadataHandle.getCollections().addAll(WriteListProcessor.this.handlerProperties.getCollections());
+
+            this.writeListItem = item;
+            this.metadataHandle = metadataHandle;
+            this.writeHandle = handle;
+            this.uri =  item.getUri();
+            this.retryCount = 0;
+        }
+
+        public int getRetryCount() {
+            return retryCount;
+        }
+
+        public void incrementRetryCount() {
+            this.retryCount++;
+        }
+
+        public String getUri() {
+            return uri;
+        }
+
+        public WriteListItem getWriteListItem() {
+            return writeListItem;
+        }
+
+        public DocumentMetadataHandle getMetadataHandle() {
+            return metadataHandle;
+        }
+
+        public AbstractWriteHandle getWriteHandle() {
+            return writeHandle;
+        }
     }
 }
