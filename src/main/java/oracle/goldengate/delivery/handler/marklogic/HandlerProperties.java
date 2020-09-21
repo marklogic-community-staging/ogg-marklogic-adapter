@@ -22,6 +22,11 @@ public class HandlerProperties {
     private String auth = "digest";
     private String rootName;
     private String transformName = "ogg-ingest-json";
+    private boolean rawName = true;
+    private String uriPrefix = "";
+    private boolean addSchema = false;
+    private String nullValue = null;
+
 
     private boolean gateway = false;
     private boolean ssl = false;
@@ -328,5 +333,33 @@ public class HandlerProperties {
     public String getUriDelimiter() {
         return uriDelimiter;
     }
+
+    public void setRawName(String rawName) {
+        this.rawName = Boolean.parseBoolean(rawName);
+    }
+
+    public boolean getRawName() {
+        return rawName;
+    }
+
+    public void setUriPrefix(String  uriPrefix) {
+        this.uriPrefix = uriPrefix;
+    }
+
+    public String getUriPrefix() {
+        return uriPrefix;
+    }
+
+    public void setAddSchema(String addSchema) {
+        this.addSchema = Boolean.parseBoolean(addSchema);
+    }
+
+    public boolean getAddSchema() {  return addSchema;  }
+
+    public void setNullValue(String nullValue) {
+        this.nullValue = nullValue;
+    }
+
+    public String getNullValue() {  return nullValue;  }
 
 }

@@ -298,4 +298,21 @@ public class MarkLogicHandler extends AbstractHandler {
     public HandlerProperties getProperties() {
         return this.handlerProperties;
     }
+
+    public void setRawName(String rawName) {
+        handlerProperties.setRawName(rawName);
+    }
+
+    public void setUriPrefix(String uriPrefix) {
+        handlerProperties.setUriPrefix(uriPrefix);
+    }
+
+    public void setAddSchema(String addSchema) {
+        handlerProperties.setAddSchema(addSchema);
+    }
+
+    public void setNullValue(String nullValue) {
+        handlerProperties.setNullValue(nullValue);
+    }
+
 }

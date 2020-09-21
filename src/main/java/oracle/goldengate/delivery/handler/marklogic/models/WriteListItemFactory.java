@@ -24,12 +24,19 @@ import java.util.stream.Collectors;
 
 public class WriteListItemFactory {
     protected static final char SQL_WORD_SEPARATORS[] = new char[]{'_'};
+    public static PendingItems from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
+        PendingItems pendingItems = new PendingItems();
+
+        final String baseUri = prepareKey(tableMetaData, op, false, handlerProperties);
+        final String previousBaseUri = checkForKeyUpdate ?
+            prepareKey(tableMetaData, op, true, handlerProperties) :
+            null;
 
     protected static String sqlToCamelCase(String sqlName) {
         return CaseUtils.toCamelCase(sqlName, false, SQL_WORD_SEPARATORS);
     }
 
-    protected static MarkLogicOp toMarkLogicOp(TableMetaData tableMetaData, Op op) {
+    protected static MarkLogicOp toMarkLogicOp(TableMetaData tableMetaData, Op op, HandlerProperties handlerProperties) {
         TableName tableName = tableMetaData.getTableName();
         MarkLogicOp markLogicOp = new MarkLogicOp()
             .withTable(tableName.getShortName())
@@ -43,15 +50,22 @@ public class WriteListItemFactory {
 
         op.forEach(col -> {
             ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(col.getIndex());
-            String columnName = sqlToCamelCase(columnMetaData.getColumnName());
+            String columnName ;
+            String nullValue = handlerProperties.getNullValue();
+            if ( handlerProperties.getRawName()) {
+                    columnName = sqlToCamelCase(columnMetaData.getColumnName());
+                }else{
+                    columnName = columnMetaData.getColumnName();
+                }
+
             if(columnMetaData.getDataType().getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY) {
                 markLogicOp.withBinaryColumn(columnName);
             }
             if(col.hasBeforeValue()) {
-                markLogicOp.withBeforeValue(columnName, columnValue(col.getBefore(), columnMetaData));
+                markLogicOp.withBeforeValue(columnName, columnValue(col.getBefore(), columnMetaData, nullValue));
             }
             if(col.hasAfterValue()) {
-                markLogicOp.withAfterValue(columnName, columnValue(col.getAfter(), columnMetaData));
+                markLogicOp.withAfterValue(columnName, columnValue(col.getAfter(), columnMetaData, nullValue));
             }
         });
 
@@ -74,6 +88,7 @@ public class WriteListItemFactory {
         List<String> uriParts = new LinkedList<>();
 
         uriParts.add("");
+        Optional.ofNullable(handlerProperties.getUriPrefix()).ifPresent(uriParts::add);
         Optional.ofNullable(handlerProperties.getOrg()).ifPresent(uriParts::add);
         Optional.ofNullable(markLogicOp.getSchema()).map(String::toLowerCase).ifPresent(uriParts::add);
         Optional.ofNullable(markLogicOp.getTable()).map(String::toLowerCase).ifPresent(uriParts::add);
@@ -99,7 +114,7 @@ public class WriteListItemFactory {
 
     public static PendingItems from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
 
-        MarkLogicOp markLogicOp = toMarkLogicOp(tableMetaData, op);
+        MarkLogicOp markLogicOp = toMarkLogicOp(tableMetaData, op, handlerProperties);
 
         Pair<Optional<String>, Optional<String>> ids = getIds(markLogicOp);
         Pair<Optional<String>, Optional<String>> uris = getUris(markLogicOp, ids, handlerProperties);
@@ -133,6 +148,25 @@ public class WriteListItemFactory {
                         if (uriChanged) {
                             binaryUris.getLeft().map(uri -> uri + binaryExtension).ifPresent(binary::setOldUri);
                         }
+                    }
+                    binary.setMap(null);
+                    binary.setBinary(blob);
+                    binary.setOperation(WriteListItem.INSERT);
+                    binary.setCollection(makeBinaryCollections(collections, handlerProperties));
+                    binary.setSourceSchema(schema);
+                    binary.setSourceTable(table);
+                    pendingItems.getBinaryItems().add(binary);
+
+                    // add the uri to the parent document
+                    columnValues.put(columnName, binaryUri);
+                } else {
+                    // blank the uri in the parent document
+                    columnValues.put(columnName, null);
+                }
+            } else {
+                String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName(), false, new char[]{'_'});
+                columnValues.put(columnName, getJsonValue(col, columnMetaData));
+            }
                         binaryUris.getRight().map(uri -> uri + binaryExtension).ifPresent(binary::setUri);
 
                         binary.setMap(null);
@@ -175,9 +209,9 @@ public class WriteListItemFactory {
         return pendingItems;
     }
 
-    protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData) {
+    protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData, String nullValue) {
         if (column == null || column.isValueNull()) {
-            return null;
+            return nullValue;
         }
 
         DsType columnDataType = columnMetaData.getDataType();
@@ -224,11 +258,32 @@ public class WriteListItemFactory {
                         return DateStringUtil.toISO(column.getTimestamp());
                     } else {
                         String dateString = column.getValue();
+
+                        try {
+                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X"));
+                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                        } catch(DateTimeParseException ex) {}
+
+                        try {
+                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X"));
+                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                        } catch(DateTimeParseException ex) {}
+
+                        try {
+                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn"));
+                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                        } catch(DateTimeParseException ex) {}
+
                         try {
                             return DateStringUtil.toISO(dateString);
                         } catch(DateTimeParseException ex) {
                             return dateString;
                         }
+                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                        } catch(DateTimeParseException ex) {}
+
+                        return dateString;
                     }
                 default:
                     return column.getValue();

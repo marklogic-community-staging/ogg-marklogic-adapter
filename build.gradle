@@ -1,21 +1,22 @@
 plugins {
     id 'java'
     id "net.saliman.properties" version "1.5.1"
-    id "com.marklogic.ml-gradle" version "4.0.4"
+    id "com.marklogic.ml-gradle" version "4.1.1"
 }
-
-version = "2.0-rc1"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+version = "2.0-rc1"
+
 repositories {
     jcenter()
 }
 
 dependencies {
+    //define version of Golden Gate, MarkLogic client and jackson versions to be used
     def ggVersion = '19.1.0.0.5.007'
     def jacksonVersion = '2.10.2'
     def marklogicClientVersion = '4.2.0'
@@ -28,6 +29,7 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-core:2.7"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:${jacksonVersion}"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
 
     implementation "commons-codec:commons-codec:1.12"
     implementation "org.apache.velocity:velocity:1.7"
@@ -37,21 +39,11 @@ dependencies {
     implementation "commons-lang:commons-lang:2.6"
     implementation "commons-collections:commons-collections:3.2.2"
 
-//  implementation "joda-time:joda-time:2.9.7"
+    implementation "joda-time:joda-time:2.9.7"
 
     testImplementation 'org.testng:testng:6.10'
 
     implementation files(
-//        "lib/ggaddons-${ggVersion}.jar",
-//        "lib/ggformatters-${ggVersion}.jar",
-//        "lib/ggjdbc-${ggVersion}.jar",
-//        "lib/ggjdbcmdp-${ggVersion}.jar",
-//        "lib/ggkafka-${ggVersion}.jar",
-//        "lib/ggkafkaconnect-${ggVersion}.jar",
-//        "lib/ggmongodb-${ggVersion}.jar",
-//        "lib/ggnosql-${ggVersion}.jar",
-
-
         "lib/ggdbutil-${ggVersion}.jar",
         "lib/gguserexitapi-${ggVersion}.jar",
         "lib/ggutil-${ggVersion}.jar"
