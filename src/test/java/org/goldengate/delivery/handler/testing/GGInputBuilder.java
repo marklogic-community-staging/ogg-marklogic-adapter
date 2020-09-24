@@ -99,7 +99,15 @@ public class GGInputBuilder {
     public GGInputBuilder withColumn(String columnName, DateString currentValue) {
         verifyNotCommitted();
         this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue)));
-        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_DATETIME.getValue(), (short) DsType.GGSubType.GGSubType_UNSET.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
+        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_DATETIME.getValue(), (short) DsType.GGSubType.GG_SUBTYPE_DEFAULT.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
+        this.columnMetaData.add(columnMetaData);
+        return this;
+    }
+
+    public GGInputBuilder withTimestampColumn(String columnName, String currentValue) {
+        verifyNotCommitted();
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue)));
+        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_DATETIME.getValue(), (short) DsType.GGSubType.GG_SUBTYPE_DEFAULT.getValue(), (short)0, (short)0, (short)0, 0L, 0L, 0L, (short)0, (short)0);
         this.columnMetaData.add(columnMetaData);
         return this;
     }
