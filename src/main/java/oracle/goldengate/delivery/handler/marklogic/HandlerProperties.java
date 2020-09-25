@@ -21,7 +21,7 @@ public class HandlerProperties {
     private String format = "json";
     private String auth = "digest";
     private String rootName;
-    private String transformName;
+    private String transformName = "ogg-ingest-json";
 
     private boolean gateway = false;
     private boolean ssl = false;
@@ -29,8 +29,8 @@ public class HandlerProperties {
     private String truststoreFormat = "PKCS12";
     private String truststorePassword = null;
 
-    private int threadCount = 4;
-    private int batchSize = 100;
+    private int threadCount = 16;
+    private int batchSize = 200;
 
     private HashMap<String, String> transformParams;
     private Collection<String> collections = new ArrayList<String>();

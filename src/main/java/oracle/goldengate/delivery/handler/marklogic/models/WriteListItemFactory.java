@@ -15,10 +15,16 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class WriteListItemFactory {
-    public static List<WriteListItem> from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, HandlerProperties handlerProperties) {
+    public static List<WriteListItem> from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
         List<WriteListItem> items = new ArrayList<>();
         final String baseUri = prepareKey(tableMetaData, op, false, handlerProperties);
         final String previousBaseUri = checkForKeyUpdate ?
@@ -80,7 +86,7 @@ public class WriteListItemFactory {
         }
         item.setMap(columnValues);
         item.setBinary(null);
-        item.setOperation(WriteListItem.INSERT);
+        item.setOperation(operationType.getDescription());
         item.setCollection(collections);
         item.setSourceSchema(schema);
         item.setSourceTable(table);
@@ -136,8 +142,28 @@ public class WriteListItemFactory {
                 case GG_DATETIME_V:
                     if (column.hasTimestampValue()) {
                         return column.getTimestamp().getInstant();
+                    } else {
+                        String dateString = column.getValue();
+
+                        try {
+                            return Instant.from(ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X")));
+                        } catch(DateTimeParseException ex) {}
+
+                        try {
+                            return Instant.from(ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X")));
+                        } catch(DateTimeParseException ex) {}
+
+                        ZoneId zoneId = TimeZone.getTimeZone("America/New_York").toZoneId();
+                        try {
+                            return Instant.from(LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn")).atZone(zoneId));
+                        } catch(DateTimeParseException ex) {}
+
+                        try {
+                            return Instant.from(LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).atZone(zoneId));
+                        } catch(DateTimeParseException ex) {}
+
+                        return dateString;
                     }
-                    return column.getValue();
                 default:
                     return column.getValue();
             }

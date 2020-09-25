@@ -16,7 +16,7 @@ public class PkUpdateOperationHandler extends OperationHandler {
 
     @Override
     public void process(TableMetaData tableMetaData, Op op) throws Exception {
-        Collection<WriteListItem> items = WriteListItemFactory.from(tableMetaData, op, false, handlerProperties);
+        Collection<WriteListItem> items = WriteListItemFactory.from(tableMetaData, op, false, WriteListItem.OperationType.PK_UPDATE, handlerProperties);
         handlerProperties.writeList.addAll(items);
 
         items.forEach(item -> {
