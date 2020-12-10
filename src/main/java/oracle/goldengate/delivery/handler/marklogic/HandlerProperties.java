@@ -1,8 +1,6 @@
 package oracle.goldengate.delivery.handler.marklogic;
 
 import com.marklogic.client.DatabaseClient;
-import oracle.goldengate.delivery.handler.marklogic.models.DeleteList;
-import oracle.goldengate.delivery.handler.marklogic.models.TruncateList;
 import oracle.goldengate.delivery.handler.marklogic.models.WriteListItem;
 
 import java.util.ArrayList;
@@ -13,7 +11,9 @@ import java.util.List;
 public class HandlerProperties {
 
     private DatabaseClient client;
+    private DatabaseClient binaryClient;
     private String database;
+    private String binaryDatabase;
     private String host;
     private String port;
     private String user;
@@ -54,8 +54,12 @@ public class HandlerProperties {
     public Long totalOperations = 0L;
 
     public List<WriteListItem> writeList = new ArrayList<>();
-    public DeleteList deleteList = new DeleteList();
-    public TruncateList truncateList = new TruncateList();
+    public List<String> deleteList = new ArrayList<>();
+
+    public List<WriteListItem> binaryWriteList = new ArrayList<>();
+    public List<String> binaryDeleteList = new ArrayList<>();
+
+    public List<String> truncateList = new ArrayList();
 
     public DatabaseClient getClient() {
         return client;
@@ -63,6 +67,14 @@ public class HandlerProperties {
 
     public void setClient(DatabaseClient client) {
         this.client = client;
+    }
+
+    public DatabaseClient getBinaryClient() {
+        return binaryClient;
+    }
+
+    public void setBinaryClient(DatabaseClient binaryClient) {
+        this.binaryClient = binaryClient;
     }
 
     public boolean isGateway() {
@@ -111,6 +123,14 @@ public class HandlerProperties {
 
     public void setDatabase(String database) {
         this.database = database;
+    }
+
+    public String getBinaryDatabase() {
+        return binaryDatabase;
+    }
+
+    public void setBinaryDatabase(String binaryDatabase) {
+        this.binaryDatabase = binaryDatabase;
     }
 
     public String getHost() {

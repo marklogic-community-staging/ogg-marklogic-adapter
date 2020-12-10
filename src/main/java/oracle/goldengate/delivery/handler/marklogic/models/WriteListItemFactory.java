@@ -24,8 +24,9 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class WriteListItemFactory {
-    public static List<WriteListItem> from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
-        List<WriteListItem> items = new ArrayList<>();
+    public static PendingItems from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
+        PendingItems pendingItems = new PendingItems();
+
         final String baseUri = prepareKey(tableMetaData, op, false, handlerProperties);
         final String previousBaseUri = checkForKeyUpdate ?
             prepareKey(tableMetaData, op, true, handlerProperties) :
@@ -65,7 +66,7 @@ public class WriteListItemFactory {
                     binary.setCollection(makeBinaryCollections(collections, handlerProperties));
                     binary.setSourceSchema(schema);
                     binary.setSourceTable(table);
-                    items.add(binary);
+                    pendingItems.getBinaryItems().add(binary);
 
                     // add the uri to the parent document
                     columnValues.put(columnName, binaryUri);
@@ -91,9 +92,9 @@ public class WriteListItemFactory {
         item.setSourceSchema(schema);
         item.setSourceTable(table);
 
-        items.add(item);
+        pendingItems.getItems().add(item);
 
-        return items;
+        return pendingItems;
     }
 
     protected static Object getJsonValue(Col col, ColumnMetaData columnMetaData) {
@@ -146,20 +147,23 @@ public class WriteListItemFactory {
                         String dateString = column.getValue();
 
                         try {
-                            return Instant.from(ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X")));
+                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X"));
+                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
                         } catch(DateTimeParseException ex) {}
 
                         try {
-                            return Instant.from(ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X")));
-                        } catch(DateTimeParseException ex) {}
-
-                        ZoneId zoneId = TimeZone.getTimeZone("America/New_York").toZoneId();
-                        try {
-                            return Instant.from(LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn")).atZone(zoneId));
+                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X"));
+                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
                         } catch(DateTimeParseException ex) {}
 
                         try {
-                            return Instant.from(LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).atZone(zoneId));
+                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn"));
+                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                        } catch(DateTimeParseException ex) {}
+
+                        try {
+                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
                         } catch(DateTimeParseException ex) {}
 
                         return dateString;

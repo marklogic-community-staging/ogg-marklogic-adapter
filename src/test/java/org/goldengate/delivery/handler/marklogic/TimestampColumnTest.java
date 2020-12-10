@@ -6,6 +6,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -39,8 +40,8 @@ public class TimestampColumnTest extends AbstractGGTest {
 
     @Test
     public void testLocalStringDateTime() throws IOException {
-        ZoneId zoneId = TimeZone.getTimeZone("America/New_York").toZoneId();
-        ZonedDateTime when = ZonedDateTime.parse("2020-09-23T17:58:10.994093000Z").withZoneSameInstant(zoneId);
+        String whenStr = "2020-09-23T17:58:10.994093001";
+        LocalDateTime when = LocalDateTime.parse(whenStr);
         String sqlDateString = when.format(SQL_LOCAL_DATETIME_FORMATTER);
 
         GGInputBuilder builder = GGInputBuilder.newInsert(this.markLogicHandler)
@@ -54,13 +55,14 @@ public class TimestampColumnTest extends AbstractGGTest {
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 
-        Assert.assertEquals(ZonedDateTime.parse((String) instance.get("tsDttm")).toInstant(), when.toInstant());
+        LocalDateTime actual = LocalDateTime.parse((String) instance.get("tsDttm"));
+        Assert.assertEquals(actual, when);
     }
 
     @Test
     public void testLocalShortStringDateTime() throws IOException {
-        ZoneId zoneId = TimeZone.getTimeZone("America/New_York").toZoneId();
-        ZonedDateTime when = ZonedDateTime.parse("2020-09-23T17:58:10Z").withZoneSameInstant(zoneId);
+        String whenStr = "2020-09-23T17:58:10";
+        LocalDateTime when = LocalDateTime.parse(whenStr);
         String sqlDateString = when.format(SQL_LOCAL_SHORT_DATETIME_FORMATTER);
 
         GGInputBuilder builder = GGInputBuilder.newInsert(this.markLogicHandler)
@@ -74,7 +76,8 @@ public class TimestampColumnTest extends AbstractGGTest {
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 
-        Assert.assertEquals(ZonedDateTime.parse((String) instance.get("tsDttm")).toInstant(), when.toInstant());
+        LocalDateTime actual = LocalDateTime.parse((String) instance.get("tsDttm"));
+        Assert.assertEquals(actual, when);
     }
 
     @Test
