@@ -22,7 +22,7 @@ public class MarkLogicClientFactory {
         TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         trustManagerFactory.init((KeyStore) null);
         for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
-            if(trustManager instanceof X509TrustManager) {
+            if (trustManager instanceof X509TrustManager) {
                 return (X509TrustManager) trustManager;
             }
         }
@@ -32,7 +32,7 @@ public class MarkLogicClientFactory {
     public static X509TrustManager getTrustManager(String truststoreLocation, String truststoreFormat, String truststorePassword) throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException {
         KeyStore truststore = KeyStore.getInstance(truststoreFormat);
 
-        try(InputStream truststoreInput = URLFactory.newURL(truststoreLocation).openStream()) {
+        try (InputStream truststoreInput = URLFactory.newURL(truststoreLocation).openStream()) {
             truststore.load(truststoreInput, truststorePassword.toCharArray());
         }
 
@@ -40,7 +40,7 @@ public class MarkLogicClientFactory {
         trustManagerFactory.init(truststore);
 
         for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
-            if(trustManager instanceof X509TrustManager) {
+            if (trustManager instanceof X509TrustManager) {
                 return (X509TrustManager) trustManager;
             }
         }
@@ -48,16 +48,16 @@ public class MarkLogicClientFactory {
         return null;
     }
 
-    public static DatabaseClient newClient(HandlerProperties handlerProperties) throws Exception {
+    public static DatabaseClient createClient(HandlerProperties handlerProperties, String database) throws Exception {
         DatabaseClientFactory.SecurityContext markLogicSecurityContext = handlerProperties.getAuth().equalsIgnoreCase("DIGEST") ?
             new DatabaseClientFactory.DigestAuthContext(handlerProperties.getUser(), handlerProperties.getPassword()) :
             new DatabaseClientFactory.BasicAuthContext(handlerProperties.getUser(), handlerProperties.getPassword());
 
-        if(handlerProperties.isSsl()) {
+        if (handlerProperties.isSsl()) {
             X509TrustManager trustManager = (handlerProperties.getTruststore() == null) ?
                 getDefaultTrustManager() :
                 getTrustManager(handlerProperties.getTruststore(), handlerProperties.getTruststoreFormat(), handlerProperties.getTruststorePassword());
-            TrustManager[] trustManagers = { trustManager };
+            TrustManager[] trustManagers = {trustManager};
 
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, trustManagers, new SecureRandom());
@@ -70,7 +70,7 @@ public class MarkLogicClientFactory {
         DatabaseClient client = DatabaseClientFactory.newClient(
             handlerProperties.getHost(),
             Integer.parseInt(handlerProperties.getPort()),
-            handlerProperties.getDatabase(),
+            database,
             markLogicSecurityContext,
             handlerProperties.isGateway() ? DatabaseClient.ConnectionType.GATEWAY : DatabaseClient.ConnectionType.DIRECT
         );
@@ -78,4 +78,15 @@ public class MarkLogicClientFactory {
         return client;
     }
 
+    public static DatabaseClient newClient(HandlerProperties handlerProperties) throws Exception {
+        return createClient(handlerProperties, handlerProperties.getDatabase());
+    }
+
+    public static DatabaseClient newBinaryClient(HandlerProperties handlerProperties) throws Exception {
+        String database = handlerProperties.getBinaryDatabase();
+        if(database == null) {
+            database = handlerProperties.getDatabase();
+        }
+        return createClient(handlerProperties, database);
+    }
 }

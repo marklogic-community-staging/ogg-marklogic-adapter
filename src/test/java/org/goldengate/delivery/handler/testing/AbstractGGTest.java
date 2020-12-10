@@ -39,19 +39,23 @@ import java.util.Properties;
 public class AbstractGGTest {
     protected HandlerProperties handlerProperties;
     protected DatabaseClient databaseClient;
+    protected DatabaseClient binaryDatabaseClient;
     protected MarkLogicHandler markLogicHandler;
 
     @BeforeClass
     public void abstractGGTestBeforeClass() throws Exception {
         this.handlerProperties = newHandlerProperties();
         this.databaseClient = MarkLogicClientFactory.newClient(this.handlerProperties);
+        this.binaryDatabaseClient = MarkLogicClientFactory.newBinaryClient(this.handlerProperties);
         this.handlerProperties.setClient(this.databaseClient);
+        this.handlerProperties.setBinaryClient(this.binaryDatabaseClient);
         this.markLogicHandler = new TestMarkLogicHandler(this.handlerProperties);
     }
 
     @AfterMethod
     public void abstractGGTestAfterMethod() {
-        deleteTestCollections();
+        deleteTestCollections(this.databaseClient);
+        deleteTestCollections(this.binaryDatabaseClient);
     }
 
     @AfterClass
@@ -97,9 +101,9 @@ public class AbstractGGTest {
         return mapper.readValue(handle.get(), HashMap.class);
     }
 
-    protected void deleteTestCollections() {
-        DataMovementManager dmm = this.databaseClient.newDataMovementManager();
-        QueryManager qm = this.databaseClient.newQueryManager();
+    protected void deleteTestCollections(DatabaseClient databaseClient) {
+        DataMovementManager dmm = databaseClient.newDataMovementManager();
+        QueryManager qm = databaseClient.newQueryManager();
         StructuredQueryBuilder sqb = qm.newStructuredQueryBuilder();
 
         Collection<String> collections = this.handlerProperties.getCollections();
@@ -138,6 +142,7 @@ public class AbstractGGTest {
 
         handlerProperties.setHost(props.getProperty("gg.handler.marklogic.host"));
         handlerProperties.setDatabase(props.getProperty("gg.handler.marklogic.database"));
+        handlerProperties.setBinaryDatabase(props.getProperty("gg.handler.marklogic.binaryDatabase"));
         handlerProperties.setPort(props.getProperty("gg.handler.marklogic.port"));
         handlerProperties.setSsl(Boolean.parseBoolean(props.getProperty("gg.handler.marklogic.ssl")));
         handlerProperties.setGateway(Boolean.parseBoolean(props.getProperty("gg.handler.marklogic.gateway")));
@@ -172,6 +177,10 @@ public class AbstractGGTest {
 
     public DatabaseClient getDatabaseClient() {
         return databaseClient;
+    }
+
+    public DatabaseClient getBinaryDatabaseClient() {
+        return binaryDatabaseClient;
     }
 
     public HandlerProperties getHandlerProperties() {

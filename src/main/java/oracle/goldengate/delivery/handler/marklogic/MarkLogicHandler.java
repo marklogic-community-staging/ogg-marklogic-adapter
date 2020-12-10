@@ -1,35 +1,21 @@
 package oracle.goldengate.delivery.handler.marklogic;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.DatabaseClientFactory;
 import com.marklogic.client.MarkLogicIOException;
 import oracle.goldengate.datasource.*;
 import oracle.goldengate.datasource.GGDataSource.Status;
 import oracle.goldengate.datasource.adapt.Op;
 import oracle.goldengate.datasource.meta.DsMetaData;
 import oracle.goldengate.datasource.meta.TableMetaData;
-import oracle.goldengate.delivery.handler.marklogic.models.WriteListProcessor;
+import oracle.goldengate.delivery.handler.marklogic.listprocesor.BinaryWriteListProcessor;
+import oracle.goldengate.delivery.handler.marklogic.listprocesor.DeleteListProcessor;
+import oracle.goldengate.delivery.handler.marklogic.listprocesor.TruncateListProcessor;
+import oracle.goldengate.delivery.handler.marklogic.listprocesor.WriteListProcessor;
 import oracle.goldengate.delivery.handler.marklogic.operations.OperationHandler;
 import oracle.goldengate.delivery.handler.marklogic.util.DBOperationFactory;
-import oracle.goldengate.delivery.handler.marklogic.util.MarkLogicBatchFailureException;
-import oracle.goldengate.delivery.handler.marklogic.util.URLFactory;
 import oracle.goldengate.util.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.cert.CertificateException;
 import java.util.concurrent.TimeUnit;
 
 public class MarkLogicHandler extends AbstractHandler {
@@ -100,10 +86,7 @@ public class MarkLogicHandler extends AbstractHandler {
         return super.transactionBegin(e, tx);
     }
 
-    @Override
-    public Status transactionCommit(DsEvent e, DsTransaction tx) {
-        Status status = super.transactionCommit(e, tx);
-
+    protected void commitWriteList() {
         boolean done = false;
         while(!done) {
             try {
@@ -119,19 +102,62 @@ public class MarkLogicHandler extends AbstractHandler {
             }
         }
         handlerProperties.writeList.clear();
+    }
 
+    protected void commitBinaryWriteList() {
+        boolean done = false;
+        while(!done) {
+            try {
+                new BinaryWriteListProcessor(handlerProperties).process(handlerProperties.binaryWriteList);
+                done = true;
+            } catch(MarkLogicIOException ex) {
+                logger.warn("There was an error communicating with the MarkLogic server. Waiting for 45 seconds to retry...");
+                try {
+                    TimeUnit.SECONDS.sleep(45);
+                } catch (InterruptedException interruptedException) {
+                    logger.warn("Sleep interrupted waiting to reconnect to MarkLogic server.", interruptedException);
+                }
+            }
+        }
+        handlerProperties.binaryWriteList.clear();
+    }
+
+    protected void commitDeleteList() {
         try {
-            handlerProperties.deleteList.commit(handlerProperties);
-            handlerProperties.truncateList.commit(handlerProperties);
-
+            new DeleteListProcessor(this.handlerProperties).process(handlerProperties.deleteList);
             handlerProperties.deleteList.clear();
+        } catch (Throwable t) {
+            logger.error("Error flushing delete records ", t);
+        }
+    }
+
+    protected void commitBinaryDeleteList() {
+        try {
+            new DeleteListProcessor(this.handlerProperties).process(handlerProperties.binaryDeleteList);
+            handlerProperties.binaryDeleteList.clear();
+        } catch (Throwable t) {
+            logger.error("Error flushing binary delete records ", t);
+        }
+    }
+
+    protected void commitTruncateList() {
+        try {
+            new TruncateListProcessor(this.handlerProperties).process(handlerProperties.truncateList);
             handlerProperties.truncateList.clear();
         } catch (Throwable t) {
-            logger.error("Error flushing records ", t);
-
-            // TODO This seems bad, but we want to let the process contiunue.
-            status = Status.OK;
+            logger.error("Error flushing truncate records ", t);
         }
+    }
+
+    @Override
+    public Status transactionCommit(DsEvent e, DsTransaction tx) {
+        Status status = super.transactionCommit(e, tx);
+
+        commitWriteList();
+        commitBinaryWriteList();
+        commitDeleteList();
+        commitBinaryDeleteList();
+        commitTruncateList();
 
         /**TODO: Add steps for rollback */
 
@@ -162,6 +188,7 @@ public class MarkLogicHandler extends AbstractHandler {
 
     protected void initMarkLogicClient() throws Exception {
         this.handlerProperties.setClient(MarkLogicClientFactory.newClient(this.handlerProperties));
+        this.handlerProperties.setBinaryClient(MarkLogicClientFactory.newBinaryClient(this.handlerProperties));
     }
 
     public void setUser(String user) {

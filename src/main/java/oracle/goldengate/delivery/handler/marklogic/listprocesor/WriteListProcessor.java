@@ -1,4 +1,4 @@
-package oracle.goldengate.delivery.handler.marklogic.models;
+package oracle.goldengate.delivery.handler.marklogic.listprocesor;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,7 +19,7 @@ import com.marklogic.client.io.Format;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.io.marker.AbstractWriteHandle;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
-import oracle.goldengate.delivery.handler.marklogic.util.MarkLogicBatchFailureException;
+import oracle.goldengate.delivery.handler.marklogic.models.WriteListItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * THIS CLASS IS NOT THREAD SAFE
  */
-public class WriteListProcessor {
+public class WriteListProcessor implements ListProcessor<WriteListItem> {
     final private static Logger logger = LoggerFactory.getLogger(WriteListProcessor.class);
     private static final int MAX_RETRY_COUNT = 50;
 
@@ -54,7 +54,7 @@ public class WriteListProcessor {
         this.ticket = this.manager.startJob(this.writeBatcher);
     }
 
-    private DataMovementManager newDataMovementManager(HandlerProperties handlerProperties) {
+    protected DataMovementManager newDataMovementManager(HandlerProperties handlerProperties) {
         DatabaseClient client = handlerProperties.getClient();
         return client.newDataMovementManager();
     }
@@ -201,10 +201,6 @@ public class WriteListProcessor {
 
     protected void flushAndWait() {
         this.writeBatcher.flushAndWait();
-
-        if(!this.retryList.isEmpty()) {
-        }
-
         this.batchedItems.clear();
     }
 

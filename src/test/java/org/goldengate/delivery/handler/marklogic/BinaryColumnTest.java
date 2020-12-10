@@ -31,7 +31,7 @@ public class BinaryColumnTest extends AbstractGGTest {
 
         Assert.assertEquals(instance.get("blobDataUri"), expectedImageUri);
 
-        BinaryDocumentManager binaryDocMgr = this.getDatabaseClient().newBinaryDocumentManager();
+        BinaryDocumentManager binaryDocMgr = this.getBinaryDatabaseClient().newBinaryDocumentManager();
         DocumentDescriptor bdd = binaryDocMgr.exists(expectedImageUri);
         Assert.assertNotNull(bdd);
     }
@@ -55,7 +55,7 @@ public class BinaryColumnTest extends AbstractGGTest {
 
         Assert.assertEquals(instance.get("blobDataUri"), null);
 
-        BinaryDocumentManager binaryDocMgr = this.getDatabaseClient().newBinaryDocumentManager();
+        BinaryDocumentManager binaryDocMgr = this.getBinaryDatabaseClient().newBinaryDocumentManager();
         DocumentDescriptor bdd = binaryDocMgr.exists(expectedImageUri);
         Assert.assertNull(bdd);
     }
