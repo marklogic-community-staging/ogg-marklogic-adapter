@@ -1,5 +1,7 @@
 package oracle.goldengate.delivery.handler.marklogic.models;
 
+import oracle.goldengate.util.DateString;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -13,7 +15,8 @@ public class WriteListItem {
     public enum OperationType {
         INSERT("insert"),
         PK_UPDATE("pk-update"),
-        UPDATE("update");
+        UPDATE("update"),
+        DELETE("delete");
 
         private final String description;
 
@@ -26,11 +29,13 @@ public class WriteListItem {
         }
     }
 
+    private String scn;
     private String uri;
     private String oldUri;
     private byte[] binary;
     private String sourceSchema;
     private String sourceTable;
+    private DateString timestamp;
 
     private Map<String, Object> map = new HashMap<>();
     // allowed values UPDATE OR INSERT
@@ -109,5 +114,21 @@ public class WriteListItem {
 
     public void setSourceTable(String sourceTable) {
         this.sourceTable = sourceTable;
+    }
+
+    public String getScn() {
+        return scn;
+    }
+
+    public void setScn(String scn) {
+        this.scn = scn;
+    }
+
+    public DateString getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(DateString timestamp) {
+        this.timestamp = timestamp;
     }
 }

@@ -1,25 +1,89 @@
-function newBaseDocument({ schemaName, tableName }) {
+function newBaseDocument({ schema, table }) {
     const document = {
         envelope: {
             headers: {
-                operations: []
+                columnUpdatedAt: {}
             },
             triples: [],
-            instance: {}
+            instance: {},
         }
-    };
+    }
 
-    document.envelope.instance[schemaName] = {};
-    document.envelope.instance[schemaName][tableName] = {};
+    document.envelope.instance[schema] = {};
+    document.envelope.instance[schema][table] = {};
 
     return document;
 }
 
-function getBaseDocument({ uri, schemaName, tableName }) {
+function getBaseDocument({ schema, table, uri }) {
     const document = cts.doc(uri);
-    return (document != null) ? document.toObject() : newBaseDocument({ schemaName, tableName });
+    return (document != null) ? document.toObject() : newBaseDocument({ schema, table });
 }
 
+function highestScn(previous, current) {
+    if(previous == null) {
+        return current;
+    } else if (current == null) {
+        return previous;
+    } else if(current > previous) {
+        return current;
+    } else {
+        return previous;
+    }
+}
+
+function ifNewer({ previous, current, doIfNewer = () => null, doIfOlder = () => null }) {
+    if(previous == null || current == null || current >= previous) {
+        doIfNewer();
+    } else {
+        doIfOlder();
+    }
+}
+
+exports.transform = function transform(context, params, content) {
+    const root = content.toObject();
+    if(root == null) {
+        // probably a binary
+        return content;
+    }
+
+    const uri = context.uri;
+    const headers = root.envelope.headers;
+    const { scn, operation, operationTimestamp, schema, table } = headers;
+
+    const baseDocument = getBaseDocument({ schema, table, uri });
+
+    const baseInstance = baseDocument.envelope.instance[schema][table];
+    const baseHeaders = baseDocument.envelope.headers;
+    const instance = root.envelope.instance[schema][table];
+
+    baseHeaders.schema = schema;
+    baseHeaders.table = table;
+
+    ifNewer({
+        previous: baseHeaders.scn,
+        current: scn,
+        doIfNewer: () => {
+            baseHeaders.operation = operation;
+            baseHeaders.scn = scn;
+            baseHeaders.operationTimestamp = operationTimestamp;
+        }
+    })
+
+    Object.keys(instance).forEach(key => {
+        const value = instance[key];
+        const oldScn = baseHeaders.columnUpdatedAt[key];
+        if(scn == null || oldScn == null || oldScn < scn) {
+            baseHeaders.columnUpdatedAt[key] = scn;
+            baseInstance[key] = value;
+        }
+    });
+
+    baseHeaders.ingestedOn = fn.currentDateTime().toString();
+    return baseDocument;
+}
+
+/*
 exports.transform = function transform(context, params, content) {
     const root = content.toObject();
     if(root == null) {
@@ -54,4 +118,4 @@ exports.transform = function transform(context, params, content) {
 
     return baseDocument;
 };
-
+*/
