@@ -2,6 +2,7 @@ package org.goldengate.delivery.handler.marklogic;
 
 import com.marklogic.client.document.BinaryDocumentManager;
 import com.marklogic.client.document.DocumentDescriptor;
+import oracle.goldengate.delivery.handler.marklogic.util.HashUtil;
 import org.goldengate.delivery.handler.testing.AbstractGGTest;
 import org.goldengate.delivery.handler.testing.GGInputBuilder;
 import org.testng.Assert;
@@ -23,8 +24,8 @@ public class BinaryColumnTest extends AbstractGGTest {
             .withColumn("BLOB_DATA", binary)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("BlobTest") + ".json";
-        String expectedImageUri = "/my_org/ogg_test/new_table/" + this.md5("BlobTest") + "/BLOB_DATA.jpg";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"BlobTest\"") + ".json";
+        String expectedImageUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"BlobTest\"") + "/blobData.jpg";
 
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
@@ -47,8 +48,8 @@ public class BinaryColumnTest extends AbstractGGTest {
             .withColumn("BLOB_DATA", (byte[])null)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("NullBlobTest") + ".json";
-        String expectedImageUri = "/my_org/ogg_test/new_table/" + this.md5("NullBlobTest") + "/BLOB_DATA.jpg";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"NullBlobTest\"") + ".json";
+        String expectedImageUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"NullBlobTest\"") + "/BLOB_DATA.jpg";
 
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");

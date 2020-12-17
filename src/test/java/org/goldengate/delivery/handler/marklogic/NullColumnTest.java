@@ -2,6 +2,7 @@ package org.goldengate.delivery.handler.marklogic;
 
 import com.marklogic.client.document.BinaryDocumentManager;
 import com.marklogic.client.document.DocumentDescriptor;
+import oracle.goldengate.delivery.handler.marklogic.util.HashUtil;
 import org.goldengate.delivery.handler.testing.AbstractGGTest;
 import org.goldengate.delivery.handler.testing.GGInputBuilder;
 import org.testng.Assert;
@@ -21,7 +22,7 @@ public class NullColumnTest extends AbstractGGTest {
             .withColumn("NULLABLE_TEXT", (String)null)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("NullStringTest") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"NullStringTest\"") + ".json";
 
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");

@@ -8,106 +8,180 @@ import oracle.goldengate.datasource.meta.DsType;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.datasource.meta.TableName;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
+import oracle.goldengate.delivery.handler.marklogic.util.HashUtil;
+import oracle.goldengate.delivery.handler.marklogic.util.JacksonUtil;
+import oracle.goldengate.delivery.handler.marklogic.util.Pair;
 import org.apache.commons.text.CaseUtils;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class WriteListItemFactory {
-    public static PendingItems from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
-        PendingItems pendingItems = new PendingItems();
+    protected static final char SQL_WORD_SEPARATORS[] = new char[]{'_'};
 
-        final String baseUri = prepareKey(tableMetaData, op, false, handlerProperties);
-        final String previousBaseUri = checkForKeyUpdate ?
-            prepareKey(tableMetaData, op, true, handlerProperties) :
-            null;
+    protected static String sqlToCamelCase(String sqlName) {
+        return CaseUtils.toCamelCase(sqlName, false, SQL_WORD_SEPARATORS);
+    }
 
+    protected static MarkLogicOp toMarkLogicOp(TableMetaData tableMetaData, Op op) {
         TableName tableName = tableMetaData.getTableName();
-        String schema = tableName.getSchemaName().toUpperCase();
-        String table = tableName.getShortName().toUpperCase();
+        MarkLogicOp markLogicOp = new MarkLogicOp()
+            .withTable(tableName.getShortName())
+            .withSchema(tableName.getSchemaName());
 
-        Map<String, Object> columnValues = new HashMap<>();
-        Collection<String> collections = makeCollections(tableName, handlerProperties);
+        tableMetaData.getKeyColumns()
+            .stream()
+            .map(ColumnMetaData::getColumnName)
+            .map(WriteListItemFactory::sqlToCamelCase)
+            .forEach(markLogicOp::withKeyColumn);
 
         op.forEach(col -> {
             ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(col.getIndex());
-            if (columnMetaData.getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY.getValue()) {
-                String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName() + "_URI", false, new char[]{'_'});
-
-                DsColumn bcol = col.getAfter();
-                if (bcol == null) {
-                    bcol = col.getBefore();
-                }
-                if (bcol != null && bcol.hasBinaryValue()) {
-                    String binaryUri = createImageUri(baseUri, columnMetaData, handlerProperties);
-                    //Insert binary document from Blob column
-                    byte[] blob = bcol.getBinary();
-                    WriteListItem binary = new WriteListItem();
-                    binary.setUri(binaryUri);
-                    if (previousBaseUri != null) {
-                        String previousBinaryUri = createImageUri(previousBaseUri, columnMetaData, handlerProperties);
-                        if (!previousBinaryUri.equals(binaryUri)) {
-                            binary.setOldUri(previousBinaryUri);
-                        }
-                    }
-                    binary.setMap(null);
-                    binary.setBinary(blob);
-                    binary.setOperation(WriteListItem.INSERT);
-                    binary.setCollection(makeBinaryCollections(collections, handlerProperties));
-                    binary.setSourceSchema(schema);
-                    binary.setSourceTable(table);
-                    pendingItems.getBinaryItems().add(binary);
-
-                    // add the uri to the parent document
-                    columnValues.put(columnName, binaryUri);
-                } else {
-                    // blank the uri in the parent document
-                    columnValues.put(columnName, null);
-                }
-            } else {
-                String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName(), false, new char[]{'_'});
-                columnValues.put(columnName, getJsonValue(col, columnMetaData));
+            String columnName = sqlToCamelCase(columnMetaData.getColumnName());
+            if(columnMetaData.getDataType().getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY) {
+                markLogicOp.withBinaryColumn(columnName);
+            }
+            if(col.hasBeforeValue()) {
+                markLogicOp.withBeforeValue(columnName, columnValue(col.getBefore(), columnMetaData));
+            }
+            if(col.hasAfterValue()) {
+                markLogicOp.withAfterValue(columnName, columnValue(col.getAfter(), columnMetaData));
             }
         });
 
-        WriteListItem item = new WriteListItem();
-        item.setUri(baseUri + "." + handlerProperties.getFormat());
-        if (previousBaseUri != null && !previousBaseUri.equals(baseUri)) {
-            item.setOldUri(previousBaseUri + "." + handlerProperties.getFormat());
+        return markLogicOp;
+    }
+
+    public static Pair<Optional<String>, Optional<String>> getIds(MarkLogicOp markLogicOp) {
+        Optional<String> id = markLogicOp.getAfterValues().map(values -> extractKey(markLogicOp.getKeyColumns(), values));
+        Optional<String> previousId = markLogicOp.getBeforeValues().map(values -> extractKey(markLogicOp.getKeyColumns(), values));
+
+        return Pair.of(previousId, id);
+    }
+
+    public static Pair<Optional<String>, Optional<String>> getUris(MarkLogicOp markLogicOp, HandlerProperties handlerProperties) {
+        Pair<Optional<String>, Optional<String>> ids = getIds(markLogicOp);
+        return getUris(markLogicOp, ids, handlerProperties);
+    }
+
+    public static String toUri(MarkLogicOp markLogicOp, String id, HandlerProperties handlerProperties, Optional<String> columnName) {
+        List<String> uriParts = new LinkedList<>();
+
+        uriParts.add("");
+        Optional.ofNullable(handlerProperties.getOrg()).ifPresent(uriParts::add);
+        Optional.ofNullable(markLogicOp.getSchema()).map(String::toLowerCase).ifPresent(uriParts::add);
+        Optional.ofNullable(markLogicOp.getTable()).map(String::toLowerCase).ifPresent(uriParts::add);
+        uriParts.add(id);
+        columnName.ifPresent(uriParts::add);
+
+        return String.join("/", uriParts);
+    }
+
+    public static Pair<Optional<String>, Optional<String>> getUris(MarkLogicOp markLogicOp, Pair<Optional<String>, Optional<String>> ids, HandlerProperties handlerProperties) {
+        return Pair.of(
+            ids.getLeft().map(id -> toUri(markLogicOp, id, handlerProperties, Optional.empty())),
+            ids.getRight().map(id -> toUri(markLogicOp, id, handlerProperties, Optional.empty()))
+        );
+    }
+
+    public static Pair<Optional<String>, Optional<String>> getUris(MarkLogicOp markLogicOp, Pair<Optional<String>, Optional<String>> ids, HandlerProperties handlerProperties, String columnName) {
+        return Pair.of(
+            ids.getLeft().map(id -> toUri(markLogicOp, id, handlerProperties, Optional.ofNullable(columnName))),
+            ids.getRight().map(id -> toUri(markLogicOp, id, handlerProperties, Optional.ofNullable(columnName)))
+        );
+    }
+
+    public static PendingItems from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
+
+        MarkLogicOp markLogicOp = toMarkLogicOp(tableMetaData, op);
+
+        Pair<Optional<String>, Optional<String>> ids = getIds(markLogicOp);
+        Pair<Optional<String>, Optional<String>> uris = getUris(markLogicOp, ids, handlerProperties);
+        Optional<String> beforeUri = uris.getLeft();
+        Optional<String> afterUri = uris.getRight();
+        boolean uriChanged = (beforeUri.isPresent() && afterUri.isPresent() && (beforeUri.get() != afterUri.get()));
+
+        boolean isKeyUpdate = false;
+        if(checkForKeyUpdate) {
+            Optional<String> previousId = ids.getLeft();
+            Optional<String> id = ids.getRight();
+            isKeyUpdate = ! (id.isPresent() && previousId.isPresent() && (id.get() == previousId.get()));
         }
-        item.setMap(columnValues);
+
+        final PendingItems pendingItems = new PendingItems();
+        final Collection<String> collections = makeCollections(markLogicOp.getSchema(), markLogicOp.getTable(), handlerProperties);
+        Map<String, Object> doc = new HashMap<>();
+        markLogicOp.getAfterValues().ifPresent(after -> {
+            after.entrySet().forEach(afterEntry -> {
+                String columnName = afterEntry.getKey();
+                Object columnValue = afterEntry.getValue();
+                if(markLogicOp.isBinary(columnName)) {
+                    if (columnValue != null) {
+                        Pair<Optional<String>, Optional<String>> binaryUris = getUris(markLogicOp, ids, handlerProperties, columnName);
+
+                        byte blob[] = (byte[]) columnValue;
+
+                        String binaryExtension = Optional.ofNullable(handlerProperties.getImageFormat()).map(fmt -> "." + fmt).orElse("");
+
+                        WriteListItem binary = new WriteListItem();
+                        if (uriChanged) {
+                            binaryUris.getLeft().map(uri -> uri + binaryExtension).ifPresent(binary::setOldUri);
+                        }
+                        binaryUris.getRight().map(uri -> uri + binaryExtension).ifPresent(binary::setUri);
+
+                        binary.setMap(null);
+                        binary.setBinary(blob);
+                        binary.setOperation(WriteListItem.INSERT);
+                        binary.setCollection(makeBinaryCollections(collections, handlerProperties));
+                        binary.setSourceSchema(markLogicOp.getSchema().toUpperCase());
+                        binary.setSourceTable(markLogicOp.getTable().toUpperCase());
+                        pendingItems.getBinaryItems().add(binary);
+                        doc.put(columnName + "Uri", binary.getUri());
+                    } else {
+                        doc.put(columnName + "Uri", null);
+                    }
+                } else {
+                    doc.put(columnName, columnValue);
+                }
+            });
+        });
+
+        WriteListItem item = new WriteListItem();
+
+        afterUri.map(uri -> uri + "." + handlerProperties.getFormat()).ifPresent(item::setUri);
+        if(uriChanged) {
+            beforeUri.map(uri -> uri + "." + handlerProperties.getFormat()).ifPresent(item::setOldUri);
+        }
+
+        item.setMap(doc);
         item.setBinary(null);
         item.setOperation(operationType.getDescription());
         item.setCollection(collections);
-        item.setSourceSchema(schema);
-        item.setSourceTable(table);
+        item.setSourceSchema(markLogicOp.getSchema().toUpperCase());
+        item.setSourceTable(markLogicOp.getTable().toUpperCase());
 
         pendingItems.getItems().add(item);
 
         return pendingItems;
     }
 
-    protected static Object getJsonValue(Col col, ColumnMetaData columnMetaData) {
-        DsColumn column = (col.getAfter() != null) ? col.getAfter() : col.getBefore();
-        if (column != null) {
-            if (column.isValueNull()) {
-                return null;
-            }
+    protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData) {
+        if (column == null || column.isValueNull()) {
+            return null;
+        }
 
-            DsType columnDataType = columnMetaData.getDataType();
-            DsType.GGType ggType = columnDataType.getGGDataType();
-            DsType.GGSubType ggSubType = columnDataType.getGGDataSubType();
+        DsType columnDataType = columnMetaData.getDataType();
+        DsType.GGType ggType = columnDataType.getGGDataType();
+        DsType.GGSubType ggSubType = columnDataType.getGGDataSubType();
 
+        if (ggSubType == DsType.GGSubType.GG_SUBTYPE_BINARY) {
+            return column.hasBinaryValue() ? column.getBinary() : null;
+        } else {
             switch (ggType) {
                 case GG_16BIT_S:
                 case GG_16BIT_U:
@@ -142,38 +216,41 @@ public class WriteListItemFactory {
                 case GG_DATETIME:
                 case GG_DATETIME_V:
                     if (column.hasTimestampValue()) {
-                        return column.getTimestamp().getInstant();
+                        return column.getTimestamp().getZonedDateTime();
                     } else {
                         String dateString = column.getValue();
 
                         try {
-                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X"));
-                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
+                            return ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X"));
+                        } catch (DateTimeParseException ex) {
+                        }
 
                         try {
-                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X"));
-                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
+                            return ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X"));
+                        } catch (DateTimeParseException ex) {
+                        }
 
                         try {
-                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn"));
-                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
+                            return LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn"));
+                        } catch (DateTimeParseException ex) {
+                        }
 
                         try {
-                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
+                            return LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                        } catch (DateTimeParseException ex) {
+                        }
 
                         return dateString;
                     }
                 default:
                     return column.getValue();
             }
-        } else {
-            return null;
         }
+    }
+
+    protected static Object getJsonValue(Col col, ColumnMetaData columnMetaData) {
+        DsColumn column = (col.getAfter() != null) ? col.getAfter() : col.getBefore();
+        return columnValue(column, columnMetaData);
     }
 
     protected static Collection<String> makeBinaryCollections(Collection<String> baseCollections, HandlerProperties handlerProperties) {
@@ -189,69 +266,44 @@ public class WriteListItemFactory {
         }
     }
 
-    protected static Collection<String> makeCollections(TableName table, HandlerProperties handlerProperties) {
+    protected static Collection<String> makeCollections(String schema, String table, HandlerProperties handlerProperties) {
         List<String> collections = new ArrayList<>();
 
         String org = handlerProperties.getOrg();
         String collectionPrefix = (org != null) ? "/" + org + "/" : "/";
 
-        collections.add(collectionPrefix + table.getSchemaName().toLowerCase() + "/" + table.getShortName().toLowerCase());
-        collections.add(collectionPrefix + table.getSchemaName().toLowerCase());
+        collections.add(collectionPrefix + schema.toLowerCase() + "/" + table.toLowerCase());
+        collections.add(collectionPrefix + schema.toLowerCase());
 
         return collections;
     }
 
-    public static String createUri(TableMetaData tableMetaData, Op op, boolean useBefore, HandlerProperties handlerProperties) {
-        return prepareKey(tableMetaData, op, useBefore, handlerProperties) + "." + handlerProperties.getFormat();
+//    public static String createUri(TableMetaData tableMetaData, Op op, boolean useBefore, HandlerProperties handlerProperties) {
+//        return prepareKey(tableMetaData, op, useBefore, handlerProperties) + "." + handlerProperties.getFormat();
+//    }
+
+    protected static String extractKey(SortedSet<String> keyColumns, Map<String, Object> data) {
+        List<String> keyData = extractKeyData(keyColumns, data);
+        return HashUtil.hash(keyData);
     }
 
-    protected static String prepareKey(TableMetaData tableMetaData, Op op, boolean useBefore, HandlerProperties handlerProperties) {
-        StringBuilder stringBuilder = new StringBuilder();
-        String delimiter = "";
+    protected static List<String> extractKeyData(SortedSet<String> keyColumns, Map<String, Object> data) {
 
-        for (ColumnMetaData columnMetaData : tableMetaData.getKeyColumns()) {
-            DsColumn column = op.getColumn(columnMetaData.getIndex());
-            if (useBefore) {
-                if (column.getBefore() != null) {
-                    stringBuilder.append(delimiter);
-                    stringBuilder.append(column.getBeforeValue());
-                    delimiter = "_";
-                }
-            } else {
-                if (column.getAfter() != null) {
-                    stringBuilder.append(delimiter);
-                    stringBuilder.append(column.getAfterValue());
-                    delimiter = "_";
-                }
-            }
-        }
-
-        String org = handlerProperties.getOrg();
-        String prefix = (org == null) ? "/" : "/" + org + "/";
-
-        TableName tableName = tableMetaData.getTableName();
-        return prefix + tableName.getSchemaName().toLowerCase() + "/" + tableName.getShortName().toLowerCase() + "/" + prepareKeyIndex(stringBuilder.toString());
-    }
-
-    // Hash the value of the index
-    protected static String prepareKeyIndex(String value) {
-        if (value != null && value.length() > 0) {
-            try {
-                MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                messageDigest.update(StandardCharsets.UTF_8.encode(value));
-                return String.format("%032x", new BigInteger(1, messageDigest.digest()));
-            } catch (NoSuchAlgorithmException ex) {
-                return value;
-            }
-        } else {
-            return UUID.randomUUID().toString();
-        }
+        return keyColumns.stream().map(keyColumn -> {
+            Object value = data.get(keyColumn);
+            String json = JacksonUtil.toJson(value);
+            return json;
+        }).collect(Collectors.toList());
+//        return keyColumns.stream()
+//            .map(data::get)
+//            .map(JacksonUtil::toJson)
+//            .collect(Collectors.toList());
     }
 
     /*
      * Create a URI to reference the image object that will be saved in another document
      *   and possibly in a different location, i.e. S3.
-     */
+     *
     protected static String createImageUri(String baseUri, ColumnMetaData columnMetaData, HandlerProperties handlerProperties) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(baseUri);
@@ -262,4 +314,6 @@ public class WriteListItemFactory {
 
         return stringBuilder.toString();
     }
+
+     */
 }
