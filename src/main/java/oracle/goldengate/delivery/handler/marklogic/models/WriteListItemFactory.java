@@ -8,6 +8,7 @@ import oracle.goldengate.datasource.meta.DsType;
 import oracle.goldengate.datasource.meta.TableMetaData;
 import oracle.goldengate.datasource.meta.TableName;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
+import oracle.goldengate.delivery.handler.marklogic.util.DateStringUtil;
 import oracle.goldengate.delivery.handler.marklogic.util.HashUtil;
 import oracle.goldengate.delivery.handler.marklogic.util.JacksonUtil;
 import oracle.goldengate.delivery.handler.marklogic.util.Pair;
@@ -140,6 +141,8 @@ public class WriteListItemFactory {
                         binary.setCollection(makeBinaryCollections(collections, handlerProperties));
                         binary.setSourceSchema(markLogicOp.getSchema().toUpperCase());
                         binary.setSourceTable(markLogicOp.getTable().toUpperCase());
+                        binary.setScn(op.getCsnStr());
+                        binary.setTimestamp(op.getOperationTimestamp());
                         pendingItems.getBinaryItems().add(binary);
                         doc.put(columnName + "Uri", binary.getUri());
                     } else {
@@ -164,6 +167,8 @@ public class WriteListItemFactory {
         item.setCollection(collections);
         item.setSourceSchema(markLogicOp.getSchema().toUpperCase());
         item.setSourceTable(markLogicOp.getTable().toUpperCase());
+        item.setScn(op.getCsnStr());
+        item.setTimestamp(op.getOperationTimestamp());
 
         pendingItems.getItems().add(item);
 
@@ -216,41 +221,19 @@ public class WriteListItemFactory {
                 case GG_DATETIME:
                 case GG_DATETIME_V:
                     if (column.hasTimestampValue()) {
-                        return column.getTimestamp().getZonedDateTime();
+                        return DateStringUtil.toISO(column.getTimestamp());
                     } else {
                         String dateString = column.getValue();
-
                         try {
-                            return ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X"));
-                        } catch (DateTimeParseException ex) {
+                            return DateStringUtil.toISO(dateString);
+                        } catch(DateTimeParseException ex) {
+                            return dateString;
                         }
-
-                        try {
-                            return ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X"));
-                        } catch (DateTimeParseException ex) {
-                        }
-
-                        try {
-                            return LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn"));
-                        } catch (DateTimeParseException ex) {
-                        }
-
-                        try {
-                            return LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                        } catch (DateTimeParseException ex) {
-                        }
-
-                        return dateString;
                     }
                 default:
                     return column.getValue();
             }
         }
-    }
-
-    protected static Object getJsonValue(Col col, ColumnMetaData columnMetaData) {
-        DsColumn column = (col.getAfter() != null) ? col.getAfter() : col.getBefore();
-        return columnValue(column, columnMetaData);
     }
 
     protected static Collection<String> makeBinaryCollections(Collection<String> baseCollections, HandlerProperties handlerProperties) {
@@ -278,42 +261,15 @@ public class WriteListItemFactory {
         return collections;
     }
 
-//    public static String createUri(TableMetaData tableMetaData, Op op, boolean useBefore, HandlerProperties handlerProperties) {
-//        return prepareKey(tableMetaData, op, useBefore, handlerProperties) + "." + handlerProperties.getFormat();
-//    }
-
     protected static String extractKey(SortedSet<String> keyColumns, Map<String, Object> data) {
         List<String> keyData = extractKeyData(keyColumns, data);
         return HashUtil.hash(keyData);
     }
 
     protected static List<String> extractKeyData(SortedSet<String> keyColumns, Map<String, Object> data) {
-
-        return keyColumns.stream().map(keyColumn -> {
-            Object value = data.get(keyColumn);
-            String json = JacksonUtil.toJson(value);
-            return json;
-        }).collect(Collectors.toList());
-//        return keyColumns.stream()
-//            .map(data::get)
-//            .map(JacksonUtil::toJson)
-//            .collect(Collectors.toList());
+        return keyColumns.stream()
+            .map(data::get)
+            .map(JacksonUtil::toJson)
+            .collect(Collectors.toList());
     }
-
-    /*
-     * Create a URI to reference the image object that will be saved in another document
-     *   and possibly in a different location, i.e. S3.
-     *
-    protected static String createImageUri(String baseUri, ColumnMetaData columnMetaData, HandlerProperties handlerProperties) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(baseUri);
-        stringBuilder.append(handlerProperties.getUriDelimiter());
-        stringBuilder.append(columnMetaData.getColumnName());
-        stringBuilder.append(".");
-        stringBuilder.append(handlerProperties.getImageFormat());
-
-        return stringBuilder.toString();
-    }
-
-     */
 }

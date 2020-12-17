@@ -22,6 +22,7 @@ import com.marklogic.client.io.marker.AbstractWriteHandle;
 import com.marklogic.client.io.marker.DocumentMetadataWriteHandle;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.models.WriteListItem;
+import oracle.goldengate.delivery.handler.marklogic.util.DateStringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -196,10 +197,11 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
         Map<String, Object> headers = new HashMap<>();
 
         headers.put("importDate", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
-        headers.put("sourceSchemaName", item.getSourceSchema());
-        headers.put("sourceTableName", item.getSourceTable());
+        headers.put("schema", item.getSourceSchema());
+        headers.put("table", item.getSourceTable());
         headers.put("operation", item.getOperation());
-        headers.put("uri", item.getUri());
+        headers.put("operationTimestamp", DateStringUtil.toISO(item.getTimestamp()));
+        Optional.ofNullable(item.getScn()).map(Long::parseLong).ifPresent(scn -> headers.put("scn", scn));
         String previousUri = item.getOldUri();
         if (previousUri != null) {
             headers.put("previousUri", previousUri);

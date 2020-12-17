@@ -10,11 +10,13 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class GGInputBuilder {
     protected MarkLogicHandler marklogicHandler;
     protected String schemaName;
     protected String tableName;
+    protected Long scn;
     protected final boolean isUpdate;
     protected GGDataSource.Status addStatus;
     protected GGDataSource.Status commitStatus;
@@ -42,6 +44,11 @@ public class GGInputBuilder {
         if(this.built) {
             throw new IllegalStateException("GGInputBuilder has already been committed.");
         }
+    }
+
+    public GGInputBuilder withScn(Long scn) {
+        this.scn = scn;
+        return this;
     }
 
     public GGInputBuilder withSchema(String schemaName) {
@@ -192,7 +199,22 @@ public class GGInputBuilder {
         DsRecord dsRecord = new DsRecord(columns);
 
         DsOperation.OpType opType = this.isUpdate ? DsOperation.OpType.DO_UPDATE : DsOperation.OpType.DO_INSERT;
-        DsOperation dsOperation = new DsOperation(ggTableName, tableMetaData, opType, new DateString(ZonedDateTime.now()), 0l, 0l, dsRecord);
+        DsOperation dsOperation = new DsOperation(
+            ggTableName,
+            tableMetaData,
+            opType,
+            new DateString(ZonedDateTime.now()),
+            GGTranID.getID(0L, 0L),
+            TxState.UNKNOWN,
+            dsRecord,
+            false,
+            GGTranID.UNSET,
+            null,
+            Optional.ofNullable(this.scn).map(Object::toString).orElse(null),  // csn
+            1,
+            false,
+            false
+        );
 
         this.addStatus = marklogicHandler.operationAdded(dsEvent, dsTransaction, dsOperation);
         this.commitStatus = marklogicHandler.transactionCommit(dsEvent, dsTransaction);
