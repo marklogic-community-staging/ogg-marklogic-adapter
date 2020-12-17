@@ -1,6 +1,7 @@
 package org.goldengate.delivery.handler.marklogic;
 
 import oracle.goldengate.datasource.GGDataSource;
+import oracle.goldengate.delivery.handler.marklogic.util.HashUtil;
 import org.goldengate.delivery.handler.testing.AbstractGGTest;
 import org.goldengate.delivery.handler.testing.GGInputBuilder;
 import org.testng.Assert;
@@ -13,7 +14,7 @@ public class JSONUpdateTest extends AbstractGGTest {
 
     @Test
     public void testJsonUpdate() throws IOException {
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("JSONUpdateTest") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"JSONUpdateTest\"") + ".json";
 
         GGInputBuilder builder = GGInputBuilder.newInsert(this.markLogicHandler)
             .withSchema("ogg_test")

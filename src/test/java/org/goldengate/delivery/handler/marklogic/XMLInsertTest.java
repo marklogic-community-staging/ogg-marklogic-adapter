@@ -1,5 +1,6 @@
 package org.goldengate.delivery.handler.marklogic;
 
+import oracle.goldengate.delivery.handler.marklogic.util.HashUtil;
 import org.goldengate.delivery.handler.testing.AbstractGGTest;
 import org.goldengate.delivery.handler.testing.GGInputBuilder;
 import org.testng.Assert;
@@ -24,7 +25,7 @@ public class XMLInsertTest extends AbstractGGTest {
             .withColumn("c5", "6")
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("XMLInsertTest") + ".xml";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"XMLInsertTest\"") + ".xml";
 
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");

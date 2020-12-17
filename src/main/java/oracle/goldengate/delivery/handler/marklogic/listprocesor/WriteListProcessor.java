@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.util.StdDateFormat;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -18,6 +19,7 @@ import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.Format;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.io.marker.AbstractWriteHandle;
+import com.marklogic.client.io.marker.DocumentMetadataWriteHandle;
 import oracle.goldengate.delivery.handler.marklogic.HandlerProperties;
 import oracle.goldengate.delivery.handler.marklogic.models.WriteListItem;
 import org.slf4j.Logger;
@@ -43,7 +45,7 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
 
     // We need to be able to read from this map in multiple threads, so cannot use a HashMap.
     // ConcurrentHashMap retrieval operations do not lock in all cases.
-    private final ConcurrentHashMap<String, WriteListItemHolder> batchedItems = new ConcurrentHashMap<>();
+//    private final ConcurrentHashMap<String, WriteListItemHolder> batchedItems = new ConcurrentHashMap<>();
     private List<WriteListItemHolder> retryList = new LinkedList<>();
 
     public WriteListProcessor(HandlerProperties handlerProperties) {
@@ -77,12 +79,17 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
             .onBatchFailure((batch, failure) -> {
                 Arrays.stream(batch.getItems()).forEach(writeEvent -> {
                     String uri = writeEvent.getTargetUri();
-                    WriteListItemHolder holder = batchedItems.get(uri);
-                    if(holder.getRetryCount() < MAX_RETRY_COUNT) {
-                        holder.incrementRetryCount();
-                        retryList.add(holder);
-                    } else {
-                        logger.error("Maximum retries ({}) exceeded for {}, discarding.", MAX_RETRY_COUNT, holder.getUri());
+                    DocumentMetadataWriteHandle metadataWriteHandle = writeEvent.getMetadata();
+                    if(metadataWriteHandle instanceof GGDocumentMetadataHandle) {
+                        GGDocumentMetadataHandle ggDocumentMetadataHandle = (GGDocumentMetadataHandle) metadataWriteHandle;
+                        if(ggDocumentMetadataHandle.getRetryCount() < MAX_RETRY_COUNT) {
+                            ggDocumentMetadataHandle.incrementRetryCount();
+                            synchronized(this.retryList) {
+                                retryList.add(new WriteListItemHolder(uri, ggDocumentMetadataHandle, writeEvent.getContent()));
+                            }
+                        } else {
+                            logger.error("Maximum retries ({}) exceeded for {}, discarding.", MAX_RETRY_COUNT, uri);
+                        }
                     }
                 });
             });
@@ -96,7 +103,7 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
     }
 
     private ObjectWriter newObjectWriter(HandlerProperties handlerProperties) {
-        ObjectMapper mapper = "xml".equals(handlerProperties.getFormat()) ? new XmlMapper() : new ObjectMapper();
+        ObjectMapper mapper = "xml".equals(handlerProperties.getFormat()) ? new XmlMapper() : new JsonMapper();
         mapper = mapper
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .setDateFormat(new StdDateFormat().withColonInTimeZone(true))
@@ -150,18 +157,20 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
     }
 
     protected void processBatch(List<WriteListItemHolder> batch) {
-        for(WriteListItemHolder holder : batch) {
+        for (WriteListItemHolder holder : batch) {
             this.writeBatcher.add(holder.getUri(), holder.getMetadataHandle(), holder.getWriteHandle());
         }
         this.flushAndWait();
 
-        while(!retryList.isEmpty()) {
-            List<WriteListItemHolder> itemsToRetry = Collections.unmodifiableList(this.retryList);
-            this.retryList = new LinkedList<>();
-            for(WriteListItemHolder holder : itemsToRetry) {
-                this.writeBatcher.add(holder.getUri(), holder.getMetadataHandle(), holder.getWriteHandle());
+        synchronized(this.retryList) {
+            while (!retryList.isEmpty()) {
+                List<WriteListItemHolder> itemsToRetry = Collections.unmodifiableList(this.retryList);
+                this.retryList = new LinkedList<>();
+                for (WriteListItemHolder holder : itemsToRetry) {
+                    this.writeBatcher.add(holder.getUri(), holder.getMetadataHandle(), holder.getWriteHandle());
+                }
+                this.flushAndWait();
             }
-            this.flushAndWait();
         }
     }
 
@@ -201,16 +210,18 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
 
     protected void flushAndWait() {
         this.writeBatcher.flushAndWait();
-        this.batchedItems.clear();
     }
 
     class WriteListItemHolder {
-        private int retryCount;
-
         private final String uri;
-        private final WriteListItem writeListItem;
-        private final DocumentMetadataHandle metadataHandle;
+        private final GGDocumentMetadataHandle metadataHandle;
         private final AbstractWriteHandle writeHandle;
+
+        public WriteListItemHolder(String uri, GGDocumentMetadataHandle metadataHandle, AbstractWriteHandle writeHandle) {
+            this.uri = uri;
+            this.metadataHandle = metadataHandle;
+            this.writeHandle = writeHandle;
+        }
 
         public WriteListItemHolder(WriteListItem item) throws JsonProcessingException {
             AbstractWriteHandle handle;
@@ -222,34 +233,20 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
                 handle = new StringHandle(docString).withFormat(Format.JSON);
             }
 
-            DocumentMetadataHandle metadataHandle = new DocumentMetadataHandle();
+            GGDocumentMetadataHandle metadataHandle = new GGDocumentMetadataHandle();
             metadataHandle.getCollections().addAll(item.getCollection());
             metadataHandle.getCollections().addAll(WriteListProcessor.this.handlerProperties.getCollections());
 
-            this.writeListItem = item;
             this.metadataHandle = metadataHandle;
             this.writeHandle = handle;
             this.uri =  item.getUri();
-            this.retryCount = 0;
-        }
-
-        public int getRetryCount() {
-            return retryCount;
-        }
-
-        public void incrementRetryCount() {
-            this.retryCount++;
         }
 
         public String getUri() {
             return uri;
         }
 
-        public WriteListItem getWriteListItem() {
-            return writeListItem;
-        }
-
-        public DocumentMetadataHandle getMetadataHandle() {
+        public GGDocumentMetadataHandle getMetadataHandle() {
             return metadataHandle;
         }
 

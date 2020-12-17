@@ -1,5 +1,6 @@
 package org.goldengate.delivery.handler.marklogic;
 
+import oracle.goldengate.delivery.handler.marklogic.util.HashUtil;
 import org.goldengate.delivery.handler.testing.AbstractGGTest;
 import org.goldengate.delivery.handler.testing.GGInputBuilder;
 import org.testng.Assert;
@@ -26,7 +27,7 @@ public class TimestampColumnTest extends AbstractGGTest {
             .withColumn("TS_DTTM", zonedDateTime)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("TimestampColumnTest") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"TimestampColumnTest\"") + ".json";
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 
@@ -51,7 +52,7 @@ public class TimestampColumnTest extends AbstractGGTest {
             .withTimestampColumn("TS_DTTM", sqlDateString)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("TimestampColumnTest") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"TimestampColumnTest\"") + ".json";
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 
@@ -72,7 +73,7 @@ public class TimestampColumnTest extends AbstractGGTest {
             .withTimestampColumn("TS_DTTM", sqlDateString)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("TimestampColumnTest") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"TimestampColumnTest\"") + ".json";
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 
@@ -92,7 +93,7 @@ public class TimestampColumnTest extends AbstractGGTest {
             .withTimestampColumn("TS_DTTM", sqlDateString)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("TimestampColumnTest") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"TimestampColumnTest\"") + ".json";
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 
@@ -111,7 +112,7 @@ public class TimestampColumnTest extends AbstractGGTest {
             .withTimestampColumn("TS_DTTM", sqlDateString)
             .commit();
 
-        String expectedUri = "/my_org/ogg_test/new_table/" + this.md5("TimestampColumnTest") + ".json";
+        String expectedUri = "/my_org/ogg_test/new_table/" + HashUtil.hash("\"TimestampColumnTest\"") + ".json";
         Map<String, Object> document = readDocument(expectedUri, builder.getMarklogicHandler().getProperties());
         Map<String, Object> instance = getInstance(document, "ogg_test", "new_table");
 

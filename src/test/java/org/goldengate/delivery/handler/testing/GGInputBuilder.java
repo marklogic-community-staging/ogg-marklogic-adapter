@@ -21,11 +21,13 @@ public class GGInputBuilder {
 
     protected ArrayList<ColumnMetaData> columnMetaData = new ArrayList<>();
     protected List<DsColumn> columns = new ArrayList<>();
+    protected short currentKeyColumnIndex;
     protected boolean built = false;
 
     private GGInputBuilder(boolean isUpdate, MarkLogicHandler marklogicHandler) {
         this.isUpdate = isUpdate;
         this.marklogicHandler = marklogicHandler;
+        this.currentKeyColumnIndex = 0;
     }
 
     public static GGInputBuilder newUpdate(MarkLogicHandler marklogicHandler) {
@@ -56,8 +58,34 @@ public class GGInputBuilder {
 
     public GGInputBuilder withPrimaryKeyColumn(String columnName, String currentValue) {
         verifyNotCommitted();
-        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue)));
-        this.columnMetaData.add(new ColumnMetaData(columnName, this.columnMetaData.size(), true));
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentValue, currentValue == null ? null : currentValue.getBytes())));
+        ColumnMetaData columnMetaData = new ColumnMetaData(columnName, this.columnMetaData.size(), columnName.length(), (short)0, (short)DsType.GGType.GG_ASCII_V.getValue(), (short) DsType.GGSubType.GG_SUBTYPE_CHAR_TYPE.getValue(), (short)1, (short)1, currentKeyColumnIndex++, 0L, 0L, 0L, (short)0, (short)0);
+        this.columnMetaData.add(columnMetaData);
+        return this;
+    }
+
+    public GGInputBuilder withPrimaryKeyColumn(String columnName, Long currentValue) {
+        verifyNotCommitted();
+
+        String currentStringValue = currentValue == null ? null : currentValue.toString();
+        this.columns.add(new DsColumnComposite(new DsColumnAfterValue(currentStringValue, currentValue != null ? currentStringValue.getBytes() : null)));
+        ColumnMetaData columnMetaData = new ColumnMetaData(
+            columnName,
+            this.columnMetaData.size(),
+            columnName.length(),
+            (short)0,
+            (short)DsType.GGType.GG_64BIT_S.getValue(),
+            (short)DsType.GGSubType.GGSubType_UNSET.getValue(),
+            (short)1,
+            (short)1,
+            currentKeyColumnIndex++,
+            0L,
+            0L,
+            0L,
+            (short)0,
+            (short)0
+        );
+        this.columnMetaData.add(columnMetaData);
         return this;
     }
 
