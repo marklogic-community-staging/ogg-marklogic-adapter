@@ -22,6 +22,10 @@ public class HandlerProperties {
     private String auth = "digest";
     private String rootName;
     private String transformName = "ogg-ingest-json";
+    private String rawName = "true";
+    private String uriPrefix = "";
+    private String addSchema = "false";
+    //TODO: add extra variable to contain parameter for empty string return value
 
     private boolean gateway = false;
     private boolean ssl = false;
@@ -329,4 +333,28 @@ public class HandlerProperties {
         return uriDelimiter;
     }
 
+    public void setRawName(String rawName) {
+        this.rawName = rawName;
+    }
+
+    public String getRawName() {
+        return rawName;
+    }
+
+    public void setUriPrefix(String  uriPrefix) {
+        this.uriPrefix = uriPrefix;
+    }
+
+    public String getUriPrefix() {
+        return uriPrefix;
+    }
+
+    public void setAddSchema(String addSchema) {
+        this.addSchema = addSchema;
+    }
+
+    public String getAddSchema() {
+        return addSchema;
+    }
+    //TODO: add extra functions for parameter for empty string return value
 }

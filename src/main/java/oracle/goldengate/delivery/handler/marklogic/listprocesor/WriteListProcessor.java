@@ -181,15 +181,22 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
 
     protected Map<String, Object> createEnvelope(WriteListItem item) {
         Map<String, Object> envelope = new HashMap<>();
-
         Map<String, Object> instance = new HashMap<>();
         Map<String, Object> schemaMap = new HashMap<>();
-        instance.put(item.getSourceSchema(), schemaMap);
-        schemaMap.put(item.getSourceTable(), item.getMap());
 
+        if (handlerProperties.getAddSchema().equals("true")){
+
+            instance.put(item.getSourceSchema(), schemaMap);
+            schemaMap.put(item.getSourceTable(), item.getMap());
+
+        } else {
+
+            instance.put(item.getSourceTable(), item.getMap());
+            return instance;
+        }
+        //TODO: new condition to remove or include envelope
         envelope.put("instance", instance);
         envelope.put("headers", getHeaders(item));
-
         return envelope;
     }
 
@@ -199,7 +206,8 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
         headers.put("importDate", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         headers.put("schema", item.getSourceSchema());
         headers.put("table", item.getSourceTable());
-        headers.put("operation", item.getOperation());
+        //TODO: add logic for flow or transform, the bellow code should only be use on transformation process
+        //headers.put("operation", item.getOperation());
         headers.put("operationTimestamp", DateStringUtil.toISO(item.getTimestamp()));
         Optional.ofNullable(item.getScn()).map(Long::parseLong).ifPresent(scn -> headers.put("scn", scn));
         String previousUri = item.getOldUri();

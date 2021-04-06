@@ -74,6 +74,7 @@ public class WriteListItemFactory {
         List<String> uriParts = new LinkedList<>();
 
         uriParts.add("");
+        Optional.ofNullable(handlerProperties.getUriPrefix()).ifPresent(uriParts::add);
         Optional.ofNullable(handlerProperties.getOrg()).ifPresent(uriParts::add);
         Optional.ofNullable(markLogicOp.getSchema()).map(String::toLowerCase).ifPresent(uriParts::add);
         Optional.ofNullable(markLogicOp.getTable()).map(String::toLowerCase).ifPresent(uriParts::add);
@@ -177,6 +178,7 @@ public class WriteListItemFactory {
 
     protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData) {
         if (column == null || column.isValueNull()) {
+            //TODO: add condition for return value to be empty string
             return null;
         }
 
