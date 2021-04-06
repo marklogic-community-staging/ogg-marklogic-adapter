@@ -16,7 +16,7 @@ S.no| Software | Version
 1.  |MarkLogic | 8.x, 9.x
 2.  |MySQL     | 14.14
 3.  |Java      | 1.8
-4.  |GoldenGate| 12.3.1
+4.  |GoldenGate| 19.1.0
 5.  |Centos    | 7.2.1511
 
 ### Setup MySQL
@@ -78,11 +78,12 @@ Replicat is responsible sending transactions target MarkLogic server. Here are t
 ##### Setup MarkLogic Adapter
 1. Download Goldengate for BigData from this url: http://www.oracle.com/technetwork/middleware/goldengate/downloads/index.html
 2. Extract the package to [HOME]/ggs directory.
-3. Download MarkLogic adapter source from this repo and create a directory 'marklogic' under [HOME]/ggs
+3. Download MarkLogic adapter source from this repo and create a directory [MARKLOGIC-ADAPTER-DIR]
 4. Copy ggdbutil*.jar, gguserexitapi*.jar and ggutil*.jar to [MARKLOGIC-ADAPTER-DIR]/lib directory
-5. Update pom.xml <goldengate.version>[GOLDENGATE VERSION]</goldengate.version>
-6. Run command ```mvn package -DskipTests=true``` to generate target jars
-7. Create replicat file RML.prm in [GOLDENGATEDIR]/dirprm/ dir
+5. Update gradle.build set ggVersion = [GOLDENGATE VERSION]
+6. Run command ```gradle jar``` to generate jar on folder [MARKLOGIC-ADAPTER-DIR]/build/libs
+    1. If you are  deploying to new environment please use ```gradle jar copyRuntimeLibs``` to add the dependency jars.
+7. Create replicat file RML.prm in [GOLDENGATEDIR]/marklogic/dirprm/ dir
 ```
 REPLICAT rml
 -- Trail file for this example is located in "AdapterExamples/trail" directory
