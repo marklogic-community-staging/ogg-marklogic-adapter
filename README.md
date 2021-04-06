@@ -55,7 +55,6 @@ TABLE SOURCEDATABASE.*;
 - Update SOURCEDATABASE to database name in source system. 
 - Update RMTHOST to remote host where extract process will run.
 
-
 2. Add extract to goldengate
 ```
 ADD EXTRACT EXT01, TRANLOG, BEGIN NOW
