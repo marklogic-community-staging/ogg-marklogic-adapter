@@ -44,7 +44,7 @@ public class WriteListItemFactory {
         op.forEach(col -> {
             ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(col.getIndex());
             String columnName ;
-            Boolean eString = handlerProperties.getEmptyString();
+            String nullValue = handlerProperties.getNullValue();
             if ( handlerProperties.getRawName()) {
                     columnName = sqlToCamelCase(columnMetaData.getColumnName());
                 }else{
@@ -55,10 +55,10 @@ public class WriteListItemFactory {
                 markLogicOp.withBinaryColumn(columnName);
             }
             if(col.hasBeforeValue()) {
-                markLogicOp.withBeforeValue(columnName, columnValue(col.getBefore(), columnMetaData, eString));
+                markLogicOp.withBeforeValue(columnName, columnValue(col.getBefore(), columnMetaData, nullValue));
             }
             if(col.hasAfterValue()) {
-                markLogicOp.withAfterValue(columnName, columnValue(col.getAfter(), columnMetaData, eString));
+                markLogicOp.withAfterValue(columnName, columnValue(col.getAfter(), columnMetaData, nullValue));
             }
         });
 
@@ -183,13 +183,9 @@ public class WriteListItemFactory {
         return pendingItems;
     }
 
-    protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData, boolean emptyString) {
+    protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData, String nullValue) {
         if (column == null || column.isValueNull()) {
-            if (emptyString){
-                return "";
-            }else {
-                return null;
-            }
+            return nullValue;
         }
 
         DsType columnDataType = columnMetaData.getDataType();

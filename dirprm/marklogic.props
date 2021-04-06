@@ -36,8 +36,10 @@ gg.handler.marklogic.uriPrefix=http://marklogic.nl
 # add schema name to document path
 gg.handler.marklogic.addSchema=false
 
-# defines null values coming from dbs as emptry string instead of null
-gg.handler.marklogic.emptyString=true
+# Defines how null values should be after ingestion.
+# Only use if diferent value is required
+# Default is null
+gg.handler.marklogic.nullValue=""
 
 goldengate.userexit.timestamp=utc
 goldengate.userexit.writers=javawriter

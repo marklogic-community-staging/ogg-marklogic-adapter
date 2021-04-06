@@ -25,7 +25,7 @@ public class HandlerProperties {
     private boolean rawName = true;
     private String uriPrefix = "";
     private boolean addSchema = false;
-    private boolean emptyString = false;
+    private String nullValue = null;
 
 
     private boolean gateway = false;
@@ -356,10 +356,10 @@ public class HandlerProperties {
 
     public boolean getAddSchema() {  return addSchema;  }
 
-    public void setEmptyString(String emptyString) {
-        this.emptyString = Boolean.parseBoolean(emptyString);
+    public void setNullValue(String nullValue) {
+        this.nullValue = nullValue;
     }
 
-    public boolean getEmptyString() {  return emptyString;  }
+    public String getNullValue() {  return nullValue;  }
 
 }
