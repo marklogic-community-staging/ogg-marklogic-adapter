@@ -184,7 +184,7 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
         Map<String, Object> instance = new HashMap<>();
         Map<String, Object> schemaMap = new HashMap<>();
 
-        if (handlerProperties.getAddSchema().equals("true")){
+        if (handlerProperties.getAddSchema()){
 
             instance.put(item.getSourceSchema(), schemaMap);
             schemaMap.put(item.getSourceTable(), item.getMap());
@@ -206,8 +206,10 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
         headers.put("importDate", OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         headers.put("schema", item.getSourceSchema());
         headers.put("table", item.getSourceTable());
-        //TODO: add logic for flow or transform, the bellow code should only be use on transformation process
-        //headers.put("operation", item.getOperation());
+
+        if (!handlerProperties.getTransformName().equals("mlRunIngest") ){
+            headers.put("operation", item.getOperation());
+        }
         headers.put("operationTimestamp", DateStringUtil.toISO(item.getTimestamp()));
         Optional.ofNullable(item.getScn()).map(Long::parseLong).ifPresent(scn -> headers.put("scn", scn));
         String previousUri = item.getOldUri();

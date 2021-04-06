@@ -310,5 +310,9 @@ public class MarkLogicHandler extends AbstractHandler {
     public void setAddSchema(String addSchema) {
         handlerProperties.setAddSchema(addSchema);
     }
-    //TODO: add extra functions for parameter for empty string return value
+
+    public void setEmptyString(String emptyString) {
+        handlerProperties.setAddSchema(emptyString);
+    }
+
 }

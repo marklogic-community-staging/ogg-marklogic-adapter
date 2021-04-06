@@ -29,7 +29,7 @@ public class WriteListItemFactory {
         return CaseUtils.toCamelCase(sqlName, false, SQL_WORD_SEPARATORS);
     }
 
-    protected static MarkLogicOp toMarkLogicOp(TableMetaData tableMetaData, Op op) {
+    protected static MarkLogicOp toMarkLogicOp(TableMetaData tableMetaData, Op op, HandlerProperties handlerProperties) {
         TableName tableName = tableMetaData.getTableName();
         MarkLogicOp markLogicOp = new MarkLogicOp()
             .withTable(tableName.getShortName())
@@ -43,15 +43,22 @@ public class WriteListItemFactory {
 
         op.forEach(col -> {
             ColumnMetaData columnMetaData = tableMetaData.getColumnMetaData(col.getIndex());
-            String columnName = sqlToCamelCase(columnMetaData.getColumnName());
+            String columnName ;
+            Boolean eString = handlerProperties.getEmptyString();
+            if ( handlerProperties.getRawName()) {
+                    columnName = sqlToCamelCase(columnMetaData.getColumnName());
+                }else{
+                    columnName = columnMetaData.getColumnName();
+                }
+
             if(columnMetaData.getDataType().getGGDataSubType() == DsType.GGSubType.GG_SUBTYPE_BINARY) {
                 markLogicOp.withBinaryColumn(columnName);
             }
             if(col.hasBeforeValue()) {
-                markLogicOp.withBeforeValue(columnName, columnValue(col.getBefore(), columnMetaData));
+                markLogicOp.withBeforeValue(columnName, columnValue(col.getBefore(), columnMetaData, eString));
             }
             if(col.hasAfterValue()) {
-                markLogicOp.withAfterValue(columnName, columnValue(col.getAfter(), columnMetaData));
+                markLogicOp.withAfterValue(columnName, columnValue(col.getAfter(), columnMetaData, eString));
             }
         });
 
@@ -100,7 +107,7 @@ public class WriteListItemFactory {
 
     public static PendingItems from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
 
-        MarkLogicOp markLogicOp = toMarkLogicOp(tableMetaData, op);
+        MarkLogicOp markLogicOp = toMarkLogicOp(tableMetaData, op, handlerProperties);
 
         Pair<Optional<String>, Optional<String>> ids = getIds(markLogicOp);
         Pair<Optional<String>, Optional<String>> uris = getUris(markLogicOp, ids, handlerProperties);
@@ -176,10 +183,13 @@ public class WriteListItemFactory {
         return pendingItems;
     }
 
-    protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData) {
+    protected static Object columnValue(DsColumn column, ColumnMetaData columnMetaData, boolean emptyString) {
         if (column == null || column.isValueNull()) {
-            //TODO: add condition for return value to be empty string
-            return null;
+            if (emptyString){
+                return "";
+            }else {
+                return null;
+            }
         }
 
         DsType columnDataType = columnMetaData.getDataType();

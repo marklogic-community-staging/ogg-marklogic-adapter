@@ -22,10 +22,11 @@ public class HandlerProperties {
     private String auth = "digest";
     private String rootName;
     private String transformName = "ogg-ingest-json";
-    private String rawName = "true";
+    private boolean rawName = true;
     private String uriPrefix = "";
-    private String addSchema = "false";
-    //TODO: add extra variable to contain parameter for empty string return value
+    private boolean addSchema = false;
+    private boolean emptyString = false;
+
 
     private boolean gateway = false;
     private boolean ssl = false;
@@ -334,10 +335,10 @@ public class HandlerProperties {
     }
 
     public void setRawName(String rawName) {
-        this.rawName = rawName;
+        this.rawName = Boolean.parseBoolean(rawName);
     }
 
-    public String getRawName() {
+    public boolean getRawName() {
         return rawName;
     }
 
@@ -350,11 +351,15 @@ public class HandlerProperties {
     }
 
     public void setAddSchema(String addSchema) {
-        this.addSchema = addSchema;
+        this.addSchema = Boolean.parseBoolean(addSchema);
     }
 
-    public String getAddSchema() {
-        return addSchema;
+    public boolean getAddSchema() {  return addSchema;  }
+
+    public void setEmptyString(String emptyString) {
+        this.emptyString = Boolean.parseBoolean(emptyString);
     }
-    //TODO: add extra functions for parameter for empty string return value
+
+    public boolean getEmptyString() {  return emptyString;  }
+
 }
