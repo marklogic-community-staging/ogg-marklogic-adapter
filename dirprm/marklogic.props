@@ -19,10 +19,27 @@ gg.handler.marklogic.rootName=root
 # gg.handler.marklogic.transformParams=<param1=paramvalue1,param2=paramvalue2,...>
 
 # The following are an example of running a data hub framework input flow
-# gg.handler.marklogic.transformName=run-flow
-# gg.handler.marklogic.transformParams=entity-name=MyEntity,flow-name=myflowname,job-id=myjobid
+# gg.handler.marklogic.transformName=mlRunIngest
+# gg.handler.marklogic.transformParams=entity-name=MyEntity,flow-name=myflowname,job-id=myjobid,step=1
+
+# Don't had job id if you can't  genereate it randomly the flow will already do it for you
+# gg.handler.marklogic.transformParams=entity-name=MyEntity,flow-name=myflowname,step=1
 
 gg.handler.marklogic.mode=tx
+
+# to keeps original raw data collumn names
+gg.handler.marklogic.rawName=true
+
+# prefix for uri creation
+gg.handler.marklogic.uriPrefix=http://marklogic.nl
+
+# add schema name to document path
+gg.handler.marklogic.addSchema=false
+
+# Defines how null values should be after ingestion.
+# Only use if diferent value is required
+# Default is null
+gg.handler.marklogic.nullValue=""
 
 goldengate.userexit.timestamp=utc
 goldengate.userexit.writers=javawriter

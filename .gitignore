@@ -37,3 +37,4 @@ test-output/
 
 # QuickStart files
 entities.layout.json
+/.idea/
