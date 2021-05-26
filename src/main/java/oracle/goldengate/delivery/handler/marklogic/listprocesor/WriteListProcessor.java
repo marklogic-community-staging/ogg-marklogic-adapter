@@ -207,7 +207,7 @@ public class WriteListProcessor implements ListProcessor<WriteListItem> {
         headers.put("schema", item.getSourceSchema());
         headers.put("table", item.getSourceTable());
 
-        if ( handlerProperties.getTransformName()!= null && !handlerProperties.getTransformName().equals("mlRunIngest") ){
+        if ( handlerProperties.getTransformName() != null && !handlerProperties.getTransformName().equals("mlRunIngest") ){
             headers.put("operation", item.getOperation());
         }
         headers.put("operationTimestamp", DateStringUtil.toISO(item.getTimestamp()));
