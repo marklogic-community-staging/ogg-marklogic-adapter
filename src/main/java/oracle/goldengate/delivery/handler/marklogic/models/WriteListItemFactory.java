@@ -24,13 +24,6 @@ import java.util.stream.Collectors;
 
 public class WriteListItemFactory {
     protected static final char SQL_WORD_SEPARATORS[] = new char[]{'_'};
-    public static PendingItems from(TableMetaData tableMetaData, Op op, boolean checkForKeyUpdate, WriteListItem.OperationType operationType, HandlerProperties handlerProperties) {
-        PendingItems pendingItems = new PendingItems();
-
-        final String baseUri = prepareKey(tableMetaData, op, false, handlerProperties);
-        final String previousBaseUri = checkForKeyUpdate ?
-            prepareKey(tableMetaData, op, true, handlerProperties) :
-            null;
 
     protected static String sqlToCamelCase(String sqlName) {
         return CaseUtils.toCamelCase(sqlName, false, SQL_WORD_SEPARATORS);
@@ -148,25 +141,6 @@ public class WriteListItemFactory {
                         if (uriChanged) {
                             binaryUris.getLeft().map(uri -> uri + binaryExtension).ifPresent(binary::setOldUri);
                         }
-                    }
-                    binary.setMap(null);
-                    binary.setBinary(blob);
-                    binary.setOperation(WriteListItem.INSERT);
-                    binary.setCollection(makeBinaryCollections(collections, handlerProperties));
-                    binary.setSourceSchema(schema);
-                    binary.setSourceTable(table);
-                    pendingItems.getBinaryItems().add(binary);
-
-                    // add the uri to the parent document
-                    columnValues.put(columnName, binaryUri);
-                } else {
-                    // blank the uri in the parent document
-                    columnValues.put(columnName, null);
-                }
-            } else {
-                String columnName = CaseUtils.toCamelCase(columnMetaData.getColumnName(), false, new char[]{'_'});
-                columnValues.put(columnName, getJsonValue(col, columnMetaData));
-            }
                         binaryUris.getRight().map(uri -> uri + binaryExtension).ifPresent(binary::setUri);
 
                         binary.setMap(null);
@@ -258,32 +232,11 @@ public class WriteListItemFactory {
                         return DateStringUtil.toISO(column.getTimestamp());
                     } else {
                         String dateString = column.getValue();
-
-                        try {
-                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn X"));
-                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
-
-                        try {
-                            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss X"));
-                            return zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
-
-                        try {
-                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.nnnnnnnnn"));
-                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
-
                         try {
                             return DateStringUtil.toISO(dateString);
                         } catch(DateTimeParseException ex) {
                             return dateString;
                         }
-                            LocalDateTime localDateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                            return localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                        } catch(DateTimeParseException ex) {}
-
-                        return dateString;
                     }
                 default:
                     return column.getValue();
